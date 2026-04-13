@@ -1,18 +1,20 @@
 import type { PageServerLoad, Actions } from './$types.js';
 import { fail } from '@sveltejs/kit';
 import { superValidate, message } from 'sveltekit-superforms';
-import { registerSchema } from '$lib/validations/register.schema.js';
+import { loginSchema } from '$lib/validations/login.schema.js';
 import { zod4 } from 'sveltekit-superforms/adapters';
 
 export const load: PageServerLoad = async () => {
 	return {
-		form: await superValidate(zod4(registerSchema))
+		form: await superValidate(zod4(loginSchema))
 	};
 };
 
 export const actions: Actions = {
 	default: async (event) => {
-		const form = await superValidate(event, zod4(registerSchema));
+		const form = await superValidate(event, zod4(loginSchema));
+
+		console.log(form);
 
 		if (!form.valid) {
 			return fail(400, {
@@ -20,17 +22,11 @@ export const actions: Actions = {
 			});
 		}
 
-		const { name, email, password } = form.data;
+		const { email, password } = form.data;
 
-		const { error } = await event.locals.supabase.auth.signUp({
+		const { error } = await event.locals.supabase.auth.signInWithPassword({
 			email,
-			password,
-			options: {
-				emailRedirectTo: `${event.url.origin}/confirm`,
-				data: {
-					full_name: name
-				}
-			}
+			password
 		});
 
 		if (error) {
@@ -38,7 +34,7 @@ export const actions: Actions = {
 				form,
 				{
 					type: 'error',
-					text: error.message || 'Gagal mendaftar. Silakan coba lagi.'
+					text: error.message || 'Gagal sign in. Silakan coba lagi.'
 				},
 				{
 					status: 400
@@ -48,7 +44,7 @@ export const actions: Actions = {
 
 		return message(form, {
 			type: 'success',
-			text: 'Registrasi berhasil! Silakan cek email Anda untuk konfirmasi.'
+			text: 'Sign in berhasil!'
 		});
 	}
 };
