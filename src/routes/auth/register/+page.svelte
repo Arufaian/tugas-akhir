@@ -1,13 +1,8 @@
 <script lang="ts">
 	import SignupForm from '$lib/components/signup-form.svelte';
 	import logo from '$lib/assets/favicon1.png';
-	import { toast } from 'svelte-sonner';
 
 	let { data } = $props();
-
-	function handleClick() {
-		toast.success('anjay');
-	}
 </script>
 
 <div class="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
@@ -16,9 +11,8 @@
 			<figure class="max-w-8">
 				<img src={logo} alt="" />
 			</figure>
+			Yamaha Mekar
 		</div>
 		<SignupForm {data} />
 	</div>
-
-	<button onclick={handleClick}>test</button>
 </div>

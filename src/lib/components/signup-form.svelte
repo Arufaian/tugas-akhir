@@ -11,6 +11,7 @@
 
 	import { Input } from '$lib/components/ui/input/index.js';
 	import type { HTMLAttributes } from 'svelte/elements';
+	import { resolve } from '$app/paths';
 
 	interface Props extends HTMLAttributes<HTMLDivElement> {
 		data: { form: SuperValidated<Infer<RegisterSchema>> };
@@ -103,7 +104,9 @@
 						{/if}
 					</Form.Button>
 					<div class="text-center text-sm text-muted-foreground">
-						Sudah punya akun? <a href="/sign-in" class="underline underline-offset-4">Sign in</a>
+						Sudah punya akun? <a href={resolve('/auth/login')} class="underline underline-offset-4"
+							>Login</a
+						>
 					</div>
 				</div>
 			</form>

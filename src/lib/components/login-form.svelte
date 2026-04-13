@@ -99,7 +99,7 @@
 
 				<div class="text-center text-sm text-muted-foreground">
 					Belum punya akun? <a href={resolve('/auth/register')} class="underline underline-offset-4"
-						>Sign up</a
+						>Daftar</a
 					>
 				</div>
 			</form>
