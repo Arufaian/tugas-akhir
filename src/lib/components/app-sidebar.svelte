@@ -147,12 +147,18 @@
 	import TeamSwitcher from './team-switcher.svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import type { ComponentProps } from 'svelte';
+	import type { UserProfileData } from '$lib/types/user-profile';
+
+	type AppSidebarProps = ComponentProps<typeof Sidebar.Root> & {
+		user: UserProfileData;
+	};
 
 	let {
 		ref = $bindable(null),
 		collapsible = 'icon',
+		user,
 		...restProps
-	}: ComponentProps<typeof Sidebar.Root> = $props();
+	}: AppSidebarProps = $props();
 </script>
 
 <Sidebar.Root bind:ref {collapsible} {...restProps}>
@@ -164,7 +170,7 @@
 		<NavProjects projects={data.projects} />
 	</Sidebar.Content>
 	<Sidebar.Footer>
-		<NavUser user={data.user} />
+		<NavUser {user} />
 	</Sidebar.Footer>
 	<Sidebar.Rail />
 </Sidebar.Root>
