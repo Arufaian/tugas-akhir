@@ -25,6 +25,7 @@ vite.config.ts.timestamp-*
 # ai agent
 .opencode
 .agents
+AGENTS.md
 
 # others
 test.css
