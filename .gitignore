@@ -29,3 +29,4 @@ vite.config.ts.timestamp-*
 # others
 test.css
 documentation.md
+.vscode
