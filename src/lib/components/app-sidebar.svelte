@@ -150,7 +150,7 @@
 	import type { UserProfileData } from '$lib/types/user-profile';
 
 	type AppSidebarProps = ComponentProps<typeof Sidebar.Root> & {
-		user: UserProfileData;
+		user: UserProfileData | null;
 	};
 
 	let {
