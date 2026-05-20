@@ -3,3 +3,4 @@ export * from './profile';
 export * from './alternative';
 export * from './criterion';
 export * from './criterion-scale';
+export * from './technology-feature';

@@ -57,6 +57,13 @@
       "when": 1779269021074,
       "tag": "0007_amusing_korvac",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1779269317495,
+      "tag": "0008_vengeful_harry_osborn",
+      "breakpoints": true
     }
   ]
 }
