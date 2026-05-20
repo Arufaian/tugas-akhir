@@ -6,3 +6,4 @@ export * from './criterion-scale';
 export * from './technology-feature';
 export * from './alternative-technology-feature';
 export * from './alternative-criterion-value';
+export * from './calculation-run';
