@@ -29,6 +29,20 @@
       "when": 1778212203435,
       "tag": "0003_enable_rls_on_profiles",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1779261887283,
+      "tag": "0004_enums_and_hardening",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1779267771354,
+      "tag": "0005_sticky_ultragirl",
+      "breakpoints": true
     }
   ]
 }
