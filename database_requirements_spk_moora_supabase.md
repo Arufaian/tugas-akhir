@@ -437,6 +437,160 @@ calculation_runs
 
 ---
 
+## 5.1 Panduan ERD (Konseptual) yang Akan Digambar
+
+Bagian ini menjadi acuan visual ERD untuk kebutuhan SPK MOORA.
+
+### A. Legenda Simbol ERD
+
+Gunakan simbol berikut agar diagram konsisten dan mudah dibaca:
+
+1. Entitas: gunakan simbol **persegi panjang**.
+   - Contoh: `alternatives`, `criteria`, `calculation_runs`.
+2. Relasi: gunakan simbol **belah ketupat (diamond)**.
+   - Contoh label relasi: "dinilai", "memiliki", "menghasilkan".
+3. Atribut: gunakan simbol **oval/elips** yang terhubung ke entitas/relasi.
+4. Primary key (PK): atribut **digarisbawahi**.
+   - Contoh: `id`, `code` (jika dijadikan PK pada model lain).
+5. Foreign key (FK): beri penanda teks **(FK)** di dekat atribut.
+   - Contoh: `alternative_id (FK)`.
+6. Atribut turunan/opsional:
+   - Jika ingin dibedakan, gunakan catatan teks "opsional" untuk kolom nullable.
+7. Kardinalitas:
+   - Gunakan label di ujung garis relasi: `1`, `M` (atau `N`).
+   - `1-M` berarti satu data parent bisa punya banyak data child.
+   - `M-N` berarti many-to-many dan harus dipecah dengan entitas asosiasi.
+
+Catatan:
+
+- Jika tool diagram mendukung crow's foot notation, boleh dipakai selama makna kardinalitas tetap sama.
+- Untuk menjaga keterbacaan, enum tidak perlu digambar sebagai entitas; cukup jadi catatan teks.
+
+### B. Entitas Utama
+
+1. `profiles`
+2. `alternatives`
+3. `criteria`
+4. `alternative_criterion_values`
+5. `technology_features`
+6. `alternative_technology_features`
+7. `criterion_scales`
+8. `calculation_runs`
+9. `calculation_details`
+10. `calculation_results`
+11. `auth.users` (sebagai entitas referensi dari Supabase Auth)
+
+### C. Relasi dan Kardinalitas (untuk label di garis relasi)
+
+1. `auth.users` **1 - 1** `profiles`
+2. `profiles` **1 - M** `calculation_runs`
+3. `alternatives` **1 - M** `alternative_criterion_values`
+4. `criteria` **1 - M** `alternative_criterion_values`
+5. `criteria` **1 - M** `criterion_scales`
+6. `alternatives` **1 - M** `alternative_technology_features`
+7. `technology_features` **1 - M** `alternative_technology_features`
+8. `calculation_runs` **1 - M** `calculation_details`
+9. `alternatives` **1 - M** `calculation_details`
+10. `criteria` **1 - M** `calculation_details`
+11. `calculation_runs` **1 - M** `calculation_results`
+12. `alternatives` **1 - M** `calculation_results`
+
+Catatan konseptual:
+
+- Relasi `alternatives` ke `criteria` secara logis adalah **M - N**, yang direalisasikan oleh entitas asosiasi `alternative_criterion_values`.
+- Relasi `alternatives` ke `technology_features` secara logis adalah **M - N**, yang direalisasikan oleh entitas asosiasi `alternative_technology_features`.
+
+### D. Atribut Kunci yang Perlu Ditonjolkan di ERD
+
+Gunakan penanda visual yang konsisten:
+
+- **PK**: primary key
+- **FK**: foreign key
+- **UK**: unique key (opsional ditampilkan jika diagram terlalu padat)
+
+#### `profiles`
+
+- PK/FK: `id` -> `auth.users.id`
+- Atribut penting: `name`, `role`, `is_active`, `created_at`, `updated_at`
+
+#### `alternatives`
+
+- PK: `id`
+- UK: `code`
+- Atribut penting: `name`, `category`, `img_url`, `is_active`, `created_at`, `updated_at`
+
+#### `criteria`
+
+- PK: `id`
+- UK: `code`
+- Atribut penting: `name`, `unit`, `raw_weight`, `normalized_weight`, `type`, `order_index`, `is_active`, `created_at`, `updated_at`
+
+#### `alternative_criterion_values` (entitas asosiasi)
+
+- PK: `id`
+- FK: `alternative_id` -> `alternatives.id`
+- FK: `criterion_id` -> `criteria.id`
+- UK komposit: (`alternative_id`, `criterion_id`)
+- Atribut penting: `raw_value`, `label_value`, `created_at`, `updated_at`
+
+#### `technology_features`
+
+- PK: `id`
+- Atribut penting: `aspect`, `name`, `score`, `description`, `is_active`, `created_at`, `updated_at`
+
+#### `alternative_technology_features` (entitas asosiasi)
+
+- PK: `id`
+- FK: `alternative_id` -> `alternatives.id`
+- FK: `technology_feature_id` -> `technology_features.id`
+- UK komposit: (`alternative_id`, `technology_feature_id`)
+- Atribut penting: `is_available`, `created_at`, `updated_at`
+
+#### `criterion_scales`
+
+- PK: `id`
+- FK: `criterion_id` -> `criteria.id`
+- Atribut penting: `label`, `value`, `description`, `order_index`, `created_at`, `updated_at`
+
+#### `calculation_runs`
+
+- PK: `id`
+- FK: `created_by` -> `profiles.id`
+- Atribut penting: `run_name`, `criteria_count`, `alternative_count`, `note`, `created_at`
+
+#### `calculation_details`
+
+- PK: `id`
+- FK: `calculation_run_id` -> `calculation_runs.id`
+- FK: `alternative_id` -> `alternatives.id`
+- FK: `criterion_id` -> `criteria.id`
+- UK komposit: (`calculation_run_id`, `alternative_id`, `criterion_id`)
+- Atribut penting: `raw_value`, `denominator`, `normalized_value`, `weight`, `weighted_value`, `criterion_type`, `created_at`
+
+#### `calculation_results`
+
+- PK: `id`
+- FK: `calculation_run_id` -> `calculation_runs.id`
+- FK: `alternative_id` -> `alternatives.id`
+- UK komposit: (`calculation_run_id`, `alternative_id`) dan (`calculation_run_id`, `rank`)
+- Atribut penting: `total_benefit`, `total_cost`, `optimization_score`, `rank`, `created_at`
+
+### E. Saran Tata Letak ERD (Agar Mudah Dibaca)
+
+1. Letakkan tabel master di kiri/atas: `profiles`, `alternatives`, `criteria`, `technology_features`.
+2. Letakkan tabel asosiasi di tengah: `alternative_criterion_values`, `alternative_technology_features`, `criterion_scales`.
+3. Letakkan tabel histori perhitungan di kanan/bawah: `calculation_runs`, `calculation_details`, `calculation_results`.
+4. Hindari garis relasi saling silang; prioritaskan keterbacaan alur:
+   - master data -> matriks penilaian -> run perhitungan -> hasil ranking.
+
+### F. Batasan Scope ERD
+
+- ERD ini fokus pada model data logikal untuk kebutuhan SPK MOORA.
+- RLS policy, trigger, function, dan view (`v_alternative_matrix`, `v_latest_ranking`) tidak wajib digambar sebagai entitas ERD.
+- Enum (`profile_role`, `criterion_type`) boleh ditampilkan sebagai catatan di sisi diagram.
+
+---
+
 ## 6. View yang Disarankan
 
 ## 6.1 `v_alternative_matrix`
