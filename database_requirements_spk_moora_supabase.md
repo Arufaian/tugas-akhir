@@ -18,7 +18,7 @@ Database menggunakan Supabase PostgreSQL.
 6. Perhitungan MOORA dapat dihitung ulang dari data alternatif, kriteria, dan nilai kriteria.
 7. Jika ingin menyimpan riwayat hasil perhitungan, gunakan `calculation_runs`, `calculation_details`, dan `calculation_results`.
 8. Kriteria `Tahun Perakitan` masih didukung. Jika nanti tidak dipakai, set `criteria.is_active = false`, lalu hitung ulang bobot dan ranking.
-9. `criteria.normalized_weight` disimpan sebagai cache untuk display/audit dan dihitung otomatis dari `raw_weight` kriteria aktif.
+9. `criteria.normalized_weight` disimpan sebagai cache untuk display/audit. Nilainya dihitung di **layer aplikasi** melalui shared utility `recalcNormalizedWeights()` (`$lib/utils/normalize.ts`), bukan via DB trigger. Fungsi ini dipakai di client (preview reaktif via `$derived`) dan server (validasi sebelum write).
 
 ---
 
@@ -33,6 +33,49 @@ Bagian ini menandai kesesuaian requirement dengan schema yang sudah ada sekarang
 - `profiles.is_active`: **belum ada** (ditandai sebagai **tambahan fase migrasi berikutnya**, bukan blocker untuk desain SPK).
 - Tabel SPK lain (`alternatives`, `criteria`, `alternative_criterion_values`, dst.): **belum dibuat**.
 - RLS saat ini baru diterapkan di `profiles`: **sudah aktif**, tetapi policy/grants masih perlu hardening pada fase implementasi.
+
+---
+
+## 2.2 Shared Utility: `recalcNormalizedWeights()`
+
+`normalized_weight` pada tabel `criteria` dihitung di **application layer**, bukan via DB trigger.
+
+Lokasi: `$lib/utils/normalize.ts`
+
+```
+recalcNormalizedWeights(criteria: { rawWeight: number; isActive: boolean }[])
+  → criteria[] dengan normalizedWeight dihitung ulang
+```
+
+Logika:
+
+```
+totalRaw = sum(rawWeight dari semua kriteria aktif)
+normalizedWeight_i = rawWeight_i / totalRaw
+```
+
+Alur pemakaian:
+
+1. **Client (preview reaktif)** — dipakai di komponen edit kriteria (slider):
+
+   ```
+   let criteria = $state([])
+   let withNormalized = $derived(recalcNormalizedWeights(criteria))
+   ```
+
+   UI update instan saat slider `raw_weight` digeser.
+
+2. **Server (form action)** — validasi ulang sebelum write ke DB:
+   ```
+   const validated = recalcNormalizedWeights(formData.criteria)
+   // simpan raw_weight + normalized_weight ke DB
+   ```
+
+Keuntungan:
+
+- Fungsi yang **sama** dipakai client dan server — tidak ada duplikasi logika.
+- Mudah di-test (pure function, tanpa DB).
+- Client mendapat feedback instan, server menjamin konsistensi data.
 
 ---
 
@@ -120,20 +163,20 @@ Penjelasan fungsi tabel:
 - Menyimpan bobot awal (`raw_weight`) dan bobot hasil normalisasi (`normalized_weight`).
 - Mengatur urutan konsisten evaluasi dan tampilan melalui `order_index`.
 
-| Kolom               | Tipe             | Constraint                     | Keterangan                                             |
-| ------------------- | ---------------- | ------------------------------ | ------------------------------------------------------ |
-| `id`                | `uuid`           | PK default `gen_random_uuid()` | ID kriteria                                            |
-| `code`              | `text`           | unique, not null               | Kode kriteria, contoh `C1`                             |
-| `name`              | `text`           | not null                       | Nama kriteria                                          |
-| `description`       | `text`           | nullable                       | Deskripsi                                              |
-| `unit`              | `text`           | nullable                       | Satuan, contoh `cc`, `skor`, `km/liter`, `juta rupiah` |
-| `raw_weight`        | `numeric(10,4)`  | not null                       | Bobot awal skala 1–5                                   |
-| `normalized_weight` | `numeric(12,9)`  | not null                       | Bobot normalisasi (diupdate otomatis oleh sistem)      |
-| `type`              | `criterion_type` | not null                       | `benefit` atau `cost`                                  |
-| `order_index`       | `integer`        | not null                       | Urutan perhitungan                                     |
-| `is_active`         | `boolean`        | not null default `true`        | Status kriteria                                        |
-| `created_at`        | `timestamptz`    | not null default `now()`       | Waktu dibuat                                           |
-| `updated_at`        | `timestamptz`    | not null default `now()`       | Waktu diubah                                           |
+| Kolom               | Tipe             | Constraint                     | Keterangan                                                          |
+| ------------------- | ---------------- | ------------------------------ | ------------------------------------------------------------------- |
+| `id`                | `uuid`           | PK default `gen_random_uuid()` | ID kriteria                                                         |
+| `code`              | `text`           | unique, not null               | Kode kriteria, contoh `C1`                                          |
+| `name`              | `text`           | not null                       | Nama kriteria                                                       |
+| `description`       | `text`           | nullable                       | Deskripsi                                                           |
+| `unit`              | `text`           | nullable                       | Satuan, contoh `cc`, `skor`, `km/liter`, `juta rupiah`              |
+| `raw_weight`        | `numeric(10,4)`  | not null                       | Bobot awal skala 1–5                                                |
+| `normalized_weight` | `numeric(12,9)`  | not null                       | Bobot normalisasi (dihitung di application layer, bukan DB trigger) |
+| `type`              | `criterion_type` | not null                       | `benefit` atau `cost`                                               |
+| `order_index`       | `integer`        | not null                       | Urutan perhitungan                                                  |
+| `is_active`         | `boolean`        | not null default `true`        | Status kriteria                                                     |
+| `created_at`        | `timestamptz`    | not null default `now()`       | Waktu dibuat                                                        |
+| `updated_at`        | `timestamptz`    | not null default `now()`       | Waktu diubah                                                        |
 
 Data awal:
 
@@ -151,7 +194,7 @@ Catatan:
 
 - `order_index` harus mempertahankan urutan benefit terlebih dahulu, lalu cost.
 - Jika `Tahun Perakitan` tidak digunakan, set `is_active = false`.
-- `normalized_weight` tidak diinput manual oleh user/admin; nilai dihitung ulang otomatis berdasarkan `raw_weight` semua kriteria aktif.
+- `normalized_weight` tidak diinput manual oleh user/admin. Nilai dihitung di **layer aplikasi** via shared utility `recalcNormalizedWeights()` (`$lib/utils/normalize.ts`) — dipanggil di client untuk preview reaktif dan di server untuk validasi sebelum write ke DB.
 - Fungsi `order_index`: menjaga urutan tampilan dan urutan evaluasi kriteria tetap konsisten di UI, laporan, dan proses hitung.
 - Tanpa `order_index`, urutan kriteria cenderung bergantung ke urutan insert/query yang bisa berubah dan membingungkan pengguna.
 
@@ -631,7 +674,7 @@ Output:
 AI agent harus melakukan langkah berikut:
 
 1. Ambil semua kriteria aktif dari `criteria`, urutkan berdasarkan `order_index`.
-   - Pastikan `normalized_weight` sudah tersinkron otomatis sebelum proses hitung (atau hitung ulang di dalam transaksi run).
+   - `normalized_weight` di-sync via `recalcNormalizedWeights()` (shared utility di `$lib/utils/normalize.ts`) sebelum proses hitung — dijalankan di server dalam satu transaksi bersama form action.
 2. Ambil semua alternatif aktif dari `alternatives`.
 3. Ambil semua nilai dari `alternative_criterion_values`.
 4. Untuk setiap kriteria, hitung denominator:
@@ -704,7 +747,7 @@ Aktifkan RLS pada semua tabel.
 - [ ] `criteria.order_index` mengikuti urutan benefit dulu, cost setelahnya.
 - [ ] Harga disimpan sebagai angka dalam juta rupiah.
 - [ ] Total bobot normalisasi kriteria aktif harus 1.
-- [ ] `normalized_weight` dihitung otomatis dari `raw_weight` kriteria aktif (bukan input manual).
+- [ ] `normalized_weight` dihitung di application layer via `recalcNormalizedWeights()` (`$lib/utils/normalize.ts`), bukan DB trigger atau input manual.
 - [ ] Ranking berasal dari `optimization_score`, bukan dari nilai normalisasi.
 - [ ] Ranking diurutkan dari nilai optimasi terbesar ke terkecil.
 
