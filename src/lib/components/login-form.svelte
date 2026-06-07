@@ -36,9 +36,16 @@
 			if (form.message) {
 				if (form.message.type === 'success') {
 					toast.success(form.message.text);
-					setTimeout(() => {
-						goto(resolve('/'));
-					}, 1500);
+
+					if (form.message.role === 'admin') {
+						setTimeout(() => {
+							goto(resolve('/admin/dashboard'));
+						}, 1500);
+					} else {
+						setTimeout(() => {
+							goto(resolve('/'));
+						}, 1500);
+					}
 				} else if (form.message.type === 'error') {
 					toast.error(form.message.text);
 				}

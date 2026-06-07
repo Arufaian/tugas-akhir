@@ -4,6 +4,7 @@
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import { resolve } from '$app/paths';
 	import LightSwitch from '$lib/components/ui/light-switch/light-switch.svelte';
 
 	let { data, children } = $props();
@@ -26,7 +27,8 @@
 			<div class="flex items-center gap-4">
 				<LightSwitch size="default" />
 				<Separator orientation="vertical" class="data-[orientation=vertical]:h-8" />
-				<Button>Login</Button>
+				<Button variant="outline"><a href={resolve('/auth/login')}> Login </a></Button>
+				<Button variant="default"><a href={resolve('/auth/register')}> Register </a></Button>
 			</div>
 		</header>
 

@@ -3,6 +3,9 @@ import { fail } from '@sveltejs/kit';
 import { superValidate, message } from 'sveltekit-superforms';
 import { loginSchema } from '$lib/validations/login.schema.js';
 import { zod4 } from 'sveltekit-superforms/adapters';
+import { db } from '$lib/server/db/index.js';
+import { profilesTable } from '$lib/server/db/schema/profile.js';
+import { eq } from 'drizzle-orm';
 
 export const load: PageServerLoad = async () => {
 	return {
@@ -40,9 +43,20 @@ export const actions: Actions = {
 			);
 		}
 
+		const {
+			data: { user }
+		} = await event.locals.supabase.auth.getUser();
+
+		const [profile] = await db
+			.select({ role: profilesTable.role })
+			.from(profilesTable)
+			.where(eq(profilesTable.id, user!.id))
+			.limit(1);
+
 		return message(form, {
 			type: 'success',
-			text: 'Sign in berhasil!'
+			text: 'Sign in berhasil!',
+			role: profile?.role
 		});
 	}
 };
