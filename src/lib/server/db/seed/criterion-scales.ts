@@ -61,6 +61,15 @@ const criterionScalesSeed: (criteriaMap: CriteriaMap) => Array<{
 ];
 
 export async function seedCriterionScales(criteriaMap: CriteriaMap): Promise<void> {
+	const existing = await db
+		.select({ id: criterionScalesTable.id })
+		.from(criterionScalesTable)
+		.limit(1);
+	if (existing.length > 0) {
+		console.log('Criterion scales already seeded. Skipping.');
+		return;
+	}
+
 	const values = criterionScalesSeed(criteriaMap);
 	await db.insert(criterionScalesTable).values(values);
 	console.log(`Inserted ${values.length} criterion scales.`);

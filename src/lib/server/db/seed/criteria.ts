@@ -78,6 +78,15 @@ const criteriaSeed = [
 export type CriteriaMap = Map<string, string>;
 
 export async function seedCriteria(): Promise<CriteriaMap> {
+	const existing = await db.select({ id: criteriaTable.id }).from(criteriaTable).limit(1);
+	if (existing.length > 0) {
+		console.log('Criteria already seeded. Skipping.');
+		const criteriaRows = await db
+			.select({ id: criteriaTable.id, code: criteriaTable.code })
+			.from(criteriaTable);
+		return new Map(criteriaRows.map((r) => [r.code, r.id]));
+	}
+
 	const withNormalized = recalcNormalizedWeights(criteriaSeed);
 	const criteriaValues = withNormalized.map((c) => ({
 		code: c.code,

@@ -40,6 +40,15 @@ const technologyFeaturesSeed = [
 ];
 
 export async function seedTechnologyFeatures(): Promise<void> {
+	const existing = await db
+		.select({ id: technologyFeaturesTable.id })
+		.from(technologyFeaturesTable)
+		.limit(1);
+	if (existing.length > 0) {
+		console.log('Technology features already seeded. Skipping.');
+		return;
+	}
+
 	await db.insert(technologyFeaturesTable).values(technologyFeaturesSeed);
 	console.log(`Inserted ${technologyFeaturesSeed.length} technology features.`);
 }
