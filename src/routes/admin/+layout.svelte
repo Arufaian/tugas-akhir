@@ -3,6 +3,7 @@
 	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+	import LightSwitch from '$lib/components/ui/light-switch/light-switch.svelte';
 	let { data, children } = $props();
 </script>
 
@@ -15,7 +16,7 @@
 		<AppSidebar user={data.profile} />
 		<Sidebar.Inset>
 			<header
-				class="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12"
+				class="flex h-16 shrink-0 items-center justify-between gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12"
 			>
 				<div class="flex items-center gap-2 px-4">
 					<Sidebar.Trigger class="-ms-1" />
@@ -31,6 +32,10 @@
 							</Breadcrumb.Item>
 						</Breadcrumb.List>
 					</Breadcrumb.Root>
+				</div>
+
+				<div class=" flex items-center gap-2 px-4">
+					<LightSwitch size="default" />
 				</div>
 			</header>
 			<div class="flex flex-1 flex-col gap-4 p-4 pt-0">
