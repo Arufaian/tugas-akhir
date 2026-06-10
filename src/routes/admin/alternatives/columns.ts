@@ -3,19 +3,10 @@ import { createRawSnippet } from 'svelte';
 import { renderSnippet } from '$lib/components/ui/data-table/index.js';
 import DataTableActions from './data-table-actions.svelte';
 import { renderComponent } from '$lib/components/ui/data-table/index.js';
-import DataTableEmailButton from './data-table-email-button.svelte';
 import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+import type { Alternative } from '$lib/validations/alternative.schema.js';
 
-// This type is used to define the shape of our data.
-// You can use a Zod schema here if you want.
-export type Payment = {
-	id: string;
-	amount: number;
-	status: 'pending' | 'processing' | 'success' | 'failed';
-	email: string;
-};
-
-export const columns: ColumnDef<Payment>[] = [
+export const columns: ColumnDef<Alternative>[] = [
 	{
 		id: 'select',
 		header: ({ table }) =>
@@ -36,45 +27,52 @@ export const columns: ColumnDef<Payment>[] = [
 	},
 
 	{
-		accessorKey: 'email',
-		header: ({ column }) =>
-			renderComponent(DataTableEmailButton, {
-				onclick: column.getToggleSortingHandler()
-			})
+		accessorKey: 'code',
+		header: 'Kode'
 	},
 
 	{
-		accessorKey: 'amount',
-		header: () => {
-			const amountHeaderSnippet = createRawSnippet(() => ({
-				render: () => `<div class="text-end">Amount</div>`
-			}));
-			return renderSnippet(amountHeaderSnippet);
-		},
-		cell: ({ row }) => {
-			const formatter = new Intl.NumberFormat('en-US', {
-				style: 'currency',
-				currency: 'USD'
-			});
+		accessorKey: 'name',
+		header: 'Nama'
+	},
 
-			const amountCellSnippet = createRawSnippet<[{ amount: number }]>((getAmount) => {
-				const { amount } = getAmount();
-				const formatted = formatter.format(amount);
+	{
+		accessorKey: 'category',
+		header: 'Kategori',
+		cell: ({ row }) => {
+			const category = row.original.category;
+			if (!category) return;
+
+			const snippet = createRawSnippet<[{ value: string }]>((getValue) => {
+				const { value } = getValue();
 				return {
-					render: () => `<div class="text-end font-medium">${formatted}</div>`
+					render: () => `<span class="capitalize">${value}</span>`
 				};
 			});
+			return renderSnippet(snippet, { value: category });
+		}
+	},
 
-			return renderSnippet(amountCellSnippet, {
-				amount: row.original.amount
+	{
+		accessorKey: 'isActive',
+		header: 'Aktif',
+		cell: ({ row }) => {
+			const isActive = row.original.isActive;
+			const snippet = createRawSnippet<[{ active: boolean }]>((getActive) => {
+				const { active } = getActive();
+				const text = active ? 'Aktif' : 'Tidak';
+				const color = active ? 'text-green-600' : 'text-red-500';
+				return {
+					render: () => `<span class="${color} font-medium">${text}</span>`
+				};
 			});
+			return renderSnippet(snippet, { active: isActive });
 		}
 	},
 
 	{
 		id: 'actions',
 		cell: ({ row }) => {
-			// You can pass whatever you need from `row.original` to the component
 			return renderComponent(DataTableActions, { id: row.original.id });
 		}
 	}

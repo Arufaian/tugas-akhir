@@ -1,11 +1,10 @@
-import { data } from './mock-data';
+import { db } from '$lib/server/db';
+import { alternativesTable } from '$lib/server/db/schema';
 
 export async function load() {
-	// logic to fetch payments data here
-
-	console.log('Data loaded:', data); // Log the data to verify it's being loaded correctly
+	const alternatives = await db.select().from(alternativesTable);
 
 	return {
-		payments: data
+		alternatives
 	};
 }

@@ -11,9 +11,9 @@
 
 <div class="rounded-xl border bg-card">
 	<DataTable
-		data={data.payments}
+		data={data.alternatives}
 		{columns}
-		filterColumn="email"
-		filterPlaceholder="Filter emails..."
+		filterColumn="name"
+		filterPlaceholder="Cari nama..."
 	/>
 </div>
