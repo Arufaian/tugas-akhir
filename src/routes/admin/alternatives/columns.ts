@@ -4,6 +4,7 @@ import { renderSnippet } from '$lib/components/ui/data-table/index.js';
 import DataTableActions from './data-table-actions.svelte';
 import { renderComponent } from '$lib/components/ui/data-table/index.js';
 import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+import { Badge } from '$lib/components/ui/badge/index.js';
 import type { Alternative } from '$lib/validations/alternative.schema.js';
 
 export const columns: ColumnDef<Alternative>[] = [
@@ -28,52 +29,66 @@ export const columns: ColumnDef<Alternative>[] = [
 
 	{
 		accessorKey: 'code',
-		header: 'Kode'
+		header: 'Code'
 	},
 
 	{
 		accessorKey: 'name',
-		header: 'Nama'
+		header: 'Name'
 	},
 
 	{
-		accessorKey: 'category',
-		header: 'Kategori',
+		accessorKey: 'imgUrl',
+		id: 'Image',
+		header: 'Image',
 		cell: ({ row }) => {
-			const category = row.original.category;
-			if (!category) return;
+			const imgUrl = row.original.imgUrl;
 
-			const snippet = createRawSnippet<[{ value: string }]>((getValue) => {
-				const { value } = getValue();
-				return {
-					render: () => `<span class="capitalize">${value}</span>`
-				};
-			});
-			return renderSnippet(snippet, { value: category });
+			const ImageSnippet = createRawSnippet(() => ({
+				render: () =>
+					`<img src="${imgUrl}" alt="Gambar Alternatif" class="w-16 h-16 object-cover rounded" />`
+			}));
+			return renderSnippet(ImageSnippet);
 		}
 	},
 
 	{
+		accessorKey: 'category',
+		header: 'Category',
+		cell: ({ row }) => row.original.category ?? '—'
+	},
+
+	{
 		accessorKey: 'isActive',
-		header: 'Aktif',
+		id: 'Status',
+		header: 'Status',
 		cell: ({ row }) => {
 			const isActive = row.original.isActive;
-			const snippet = createRawSnippet<[{ active: boolean }]>((getActive) => {
-				const { active } = getActive();
-				const text = active ? 'Aktif' : 'Tidak';
-				const color = active ? 'text-green-600' : 'text-red-500';
-				return {
-					render: () => `<span class="${color} font-medium">${text}</span>`
-				};
+			const children = createRawSnippet(() => ({
+				render: () => (isActive ? 'Aktif' : 'Tidak')
+			}));
+			return renderComponent(Badge, {
+				variant: 'outline',
+				class: isActive
+					? 'bg-green-100 text-green-700 border-green-200'
+					: 'bg-red-100 text-red-700 border-red-200',
+				children
 			});
-			return renderSnippet(snippet, { active: isActive });
 		}
 	},
 
 	{
 		id: 'actions',
+		header: () => {
+			const actionsHeaderSnippet = createRawSnippet(() => ({
+				render: () => `<div class="text-center">Actions</div>`
+			}));
+			return renderSnippet(actionsHeaderSnippet);
+		},
+
 		cell: ({ row }) => {
 			return renderComponent(DataTableActions, { id: row.original.id });
-		}
+		},
+		enableHiding: false
 	}
 ];

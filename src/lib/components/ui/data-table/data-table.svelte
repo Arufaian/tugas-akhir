@@ -1,5 +1,6 @@
 <script lang="ts" generics="TData, TValue">
 	import { Button } from '$lib/components/ui/button/index.js';
+	import Settings_2 from '@lucide/svelte/icons/settings-2';
 	import {
 		type ColumnDef,
 		type PaginationState,
@@ -119,7 +120,9 @@
 		<DropdownMenu.Root>
 			<DropdownMenu.Trigger>
 				{#snippet child({ props })}
-					<Button {...props} variant="outline" class="ms-auto">Columns</Button>
+					<Button {...props} variant="outline" class="ms-auto">
+						<Settings_2 />View
+					</Button>
 				{/snippet}
 			</DropdownMenu.Trigger>
 			<DropdownMenu.Content align="end">
