@@ -1,6 +1,8 @@
 <script lang="ts" generics="TData, TValue">
 	import { Button } from '$lib/components/ui/button/index.js';
 	import Settings_2 from '@lucide/svelte/icons/settings-2';
+	import XIcon from '@lucide/svelte/icons/x';
+	import type { Component } from 'svelte';
 	import {
 		type ColumnDef,
 		type PaginationState,
@@ -11,31 +13,56 @@
 		getCoreRowModel,
 		getPaginationRowModel,
 		getSortedRowModel,
-		getFilteredRowModel
+		getFilteredRowModel,
+		getFacetedRowModel,
+		getFacetedUniqueValues,
+		getFacetedMinMaxValues
 	} from '@tanstack/table-core';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-	import { createSvelteTable, FlexRender } from '$lib/components/ui/data-table/index.js';
+	import {
+		createSvelteTable,
+		FlexRender,
+		DataTableFacetedFilter
+	} from '$lib/components/ui/data-table/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
+
+	type FacetedFilterConfig = {
+		columnId: string;
+		title: string;
+		options: { label: string; value: string; icon?: Component }[];
+	};
 
 	type DataTableProps<TData, TValue> = {
 		columns: ColumnDef<TData, TValue>[];
 		data: TData[];
 		filterColumn?: string;
 		filterPlaceholder?: string;
+		facetedFilters?: FacetedFilterConfig[];
 	};
 
 	let {
 		data,
 		columns,
 		filterColumn = undefined,
-		filterPlaceholder = 'Filter...'
+		filterPlaceholder = 'Filter...',
+		facetedFilters = []
 	}: DataTableProps<TData, TValue> = $props();
 	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 10 });
 	let sorting = $state<SortingState>([]);
 	let columnFilters = $state<ColumnFiltersState>([]);
 	let columnVisibility = $state<VisibilityState>({});
 	let rowSelection = $state<RowSelectionState>({});
+
+	const anyFacetedFilterActive = $derived(
+		facetedFilters.some((f) => table.getColumn(f.columnId)?.getFilterValue() !== undefined)
+	);
+
+	function handleResetFacetedFilters() {
+		for (const f of facetedFilters) {
+			table.getColumn(f.columnId)?.setFilterValue(undefined);
+		}
+	}
 
 	const table = createSvelteTable({
 		get data() {
@@ -46,6 +73,9 @@
 		getPaginationRowModel: getPaginationRowModel(),
 		getSortedRowModel: getSortedRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
+		getFacetedRowModel: getFacetedRowModel(),
+		getFacetedUniqueValues: getFacetedUniqueValues(),
+		getFacetedMinMaxValues: getFacetedMinMaxValues(),
 		onPaginationChange: (updater) => {
 			if (typeof updater === 'function') {
 				pagination = updater(pagination);
@@ -102,7 +132,7 @@
 </script>
 
 <div class="px-8 py-4">
-	<div class="flex items-center py-4">
+	<div class="flex items-center gap-4 py-4">
 		{#if filterColumn}
 			<Input
 				placeholder={filterPlaceholder}
@@ -115,6 +145,20 @@
 				}}
 				class="max-w-sm"
 			/>
+		{/if}
+
+		{#each facetedFilters as filter (filter.columnId)}
+			{@const col = table.getColumn(filter.columnId)}
+			{#if col}
+				<DataTableFacetedFilter column={col} title={filter.title} options={filter.options} />
+			{/if}
+		{/each}
+
+		{#if anyFacetedFilterActive}
+			<Button variant="ghost" onclick={handleResetFacetedFilters} class="h-8 px-2 lg:px-3">
+				Reset
+				<XIcon class="ms-2 size-4" />
+			</Button>
 		{/if}
 
 		<DropdownMenu.Root>

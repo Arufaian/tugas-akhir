@@ -1,8 +1,11 @@
 import type { ColumnDef } from '@tanstack/table-core';
 import { createRawSnippet } from 'svelte';
-import { renderSnippet } from '$lib/components/ui/data-table/index.js';
+import {
+	renderSnippet,
+	renderComponent,
+	DataTableColumnHeader
+} from '$lib/components/ui/data-table/index.js';
 import DataTableActions from './data-table-actions.svelte';
-import { renderComponent } from '$lib/components/ui/data-table/index.js';
 import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 import { Badge } from '$lib/components/ui/badge/index.js';
 import type { Alternative } from '$lib/validations/alternative.schema.js';
@@ -29,7 +32,11 @@ export const columns: ColumnDef<Alternative>[] = [
 
 	{
 		accessorKey: 'code',
-		header: 'Code'
+		header: ({ column }) =>
+			renderComponent(DataTableColumnHeader, {
+				column,
+				title: 'Code'
+			})
 	},
 
 	{
@@ -55,7 +62,18 @@ export const columns: ColumnDef<Alternative>[] = [
 	{
 		accessorKey: 'category',
 		header: 'Category',
-		cell: ({ row }) => row.original.category ?? '—'
+		cell: ({ row }) => row.original.category ?? '—',
+		filterFn: (row, columnId, filterValue: string[]) => {
+			if (!filterValue?.length) return true;
+			const value = row.getValue<string | null>(columnId);
+			console.log('🔍 filterFn category:', {
+				columnId,
+				filterValue,
+				value,
+				original: row.original
+			});
+			return value ? filterValue.includes(value) : false;
+		}
 	},
 
 	{
@@ -74,6 +92,11 @@ export const columns: ColumnDef<Alternative>[] = [
 					: 'bg-red-100 text-red-700 border-red-200',
 				children
 			});
+		},
+		filterFn: (row, columnId, filterValue: string[]) => {
+			if (!filterValue?.length) return true;
+			const value = row.getValue<boolean>(columnId);
+			return filterValue.includes(String(value));
 		}
 	},
 
