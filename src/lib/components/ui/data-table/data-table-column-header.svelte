@@ -29,7 +29,7 @@
 						{...props}
 						variant="ghost"
 						size="sm"
-						class="-ms-3 h-8 data-[state=open]:bg-accent"
+						class="-ms-3 h-8 data-[state=open]:bg-secondary"
 					>
 						<span>{title}</span>
 						{#if column.getIsSorted() === 'desc'}
@@ -43,11 +43,17 @@
 				{/snippet}
 			</DropdownMenu.Trigger>
 			<DropdownMenu.Content align="start">
-				<DropdownMenu.Item onclick={() => column.toggleSorting(false)}>
+				<DropdownMenu.Item
+					class="focus:bg-secondary dark:focus:bg-accent"
+					onclick={() => column.toggleSorting(false)}
+				>
 					<ArrowUpIcon class="me-2 size-3.5 text-muted-foreground/70" />
 					Asc
 				</DropdownMenu.Item>
-				<DropdownMenu.Item onclick={() => column.toggleSorting(true)}>
+				<DropdownMenu.Item
+					class="focus:bg-secondary dark:focus:bg-accent"
+					onclick={() => column.toggleSorting(true)}
+				>
 					<ArrowDownIcon class="me-2 size-3.5 text-muted-foreground/70" />
 					Desc
 				</DropdownMenu.Item>
