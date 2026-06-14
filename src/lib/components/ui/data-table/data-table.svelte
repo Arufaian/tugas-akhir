@@ -136,8 +136,8 @@
 	});
 </script>
 
-<div class="px-8 py-4">
-	<div class="flex items-center gap-4 py-4">
+<div class="px-6 py-4">
+	<div class="flex flex-wrap items-center gap-4 py-4">
 		{#if filterColumn}
 			<Input
 				placeholder={filterPlaceholder}
@@ -169,7 +169,7 @@
 		<DropdownMenu.Root>
 			<DropdownMenu.Trigger>
 				{#snippet child({ props })}
-					<Button {...props} variant="outline" class="ms-auto">
+					<Button {...props} variant="outline">
 						<Settings_2 />View
 					</Button>
 				{/snippet}
@@ -187,7 +187,7 @@
 		</DropdownMenu.Root>
 	</div>
 
-	<div class="rounded-md border">
+	<div class="overflow-x-auto rounded-md border">
 		<Table.Root>
 			<Table.Header>
 				{#each table.getHeaderGroups() as headerGroup (headerGroup.id)}
@@ -223,13 +223,13 @@
 		</Table.Root>
 	</div>
 
-	<div class="flex items-center justify-between px-2">
-		<div class="flex-1 text-sm text-muted-foreground">
+	<div class="flex flex-col items-center gap-4 px-2 pt-4 sm:flex-row sm:justify-between">
+		<div class="text-sm text-muted-foreground">
 			{table.getFilteredSelectedRowModel().rows.length} of
 			{table.getFilteredRowModel().rows.length} row(s) selected.
 		</div>
-		<div class="flex items-center space-x-6 pt-8 lg:space-x-8">
-			<div class="flex items-center space-x-2">
+		<div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 lg:gap-x-8">
+			<div class="flex items-center gap-2">
 				<p class="text-sm font-medium">Rows per page</p>
 				<Select.Root
 					type="single"
@@ -250,14 +250,14 @@
 					</Select.Content>
 				</Select.Root>
 			</div>
-			<div class="flex w-25 items-center justify-center text-sm font-medium">
+			<div class="flex items-center justify-center text-sm font-medium">
 				Page {table.getState().pagination.pageIndex + 1} of
 				{table.getPageCount()}
 			</div>
-			<div class="flex items-center space-x-2">
+			<div class="flex items-center gap-2">
 				<Button
 					variant="outline"
-					class="hidden size-8 p-0 lg:flex"
+					class="size-8 p-0"
 					onclick={() => table.setPageIndex(0)}
 					disabled={!table.getCanPreviousPage()}
 				>
@@ -284,7 +284,7 @@
 				</Button>
 				<Button
 					variant="outline"
-					class="hidden size-8 p-0 lg:flex"
+					class="size-8 p-0"
 					onclick={() => table.setPageIndex(table.getPageCount() - 1)}
 					disabled={!table.getCanNextPage()}
 				>
