@@ -20,15 +20,15 @@
 		<Loader2Icon class="size-4 animate-spin" />
 	{/snippet}
 	{#snippet successIcon()}
-		<CircleCheckIcon class="size-4" />
+		<CircleCheckIcon class="size-4 text-success" />
 	{/snippet}
 	{#snippet errorIcon()}
-		<OctagonXIcon class="size-4" />
+		<OctagonXIcon class="size-4 text-destructive" />
 	{/snippet}
 	{#snippet infoIcon()}
-		<InfoIcon class="size-4" />
+		<InfoIcon class="size-4 text-info" />
 	{/snippet}
 	{#snippet warningIcon()}
-		<TriangleAlertIcon class="size-4" />
+		<TriangleAlertIcon class="size-4 text-warning" />
 	{/snippet}
 </Sonner>

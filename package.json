@@ -67,6 +67,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@fontsource/dm-sans": "^5.2.8",
 		"@jsrepo/mcp": "^0.0.26",
 		"@supabase/ssr": "^0.10.2",
 		"@supabase/supabase-js": "^2.103.0",

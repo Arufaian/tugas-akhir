@@ -1,4 +1,4 @@
-import type { ColumnDef } from '@tanstack/table-core';
+import type { Column, ColumnDef } from '@tanstack/table-core';
 import { createRawSnippet } from 'svelte';
 import {
 	renderSnippet,
@@ -34,7 +34,7 @@ export const columns: ColumnDef<Alternative>[] = [
 		accessorKey: 'code',
 		header: ({ column }) =>
 			renderComponent(DataTableColumnHeader, {
-				column,
+				column: column as Column<unknown, unknown>,
 				title: 'Code'
 			})
 	},
