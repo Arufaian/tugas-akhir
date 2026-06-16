@@ -47,7 +47,12 @@
 				{data.total}
 			</span>
 			<span class="text-xs text-muted-foreground/70">motor</span>
-			<Button variant="outline" size="sm" class="text-primary hover:bg-primary/10">
+			<Button
+				variant="outline"
+				size="sm"
+				class="text-primary hover:bg-primary/10"
+				href="/admin/alternatives/create"
+			>
 				<Plus class="size-3.5" />
 				Tambah
 			</Button>

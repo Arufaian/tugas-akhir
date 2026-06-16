@@ -83,7 +83,7 @@ export const columns: ColumnDef<Alternative>[] = [
 		cell: ({ row }) => {
 			const isActive = row.original.isActive;
 			const children = createRawSnippet(() => ({
-				render: () => (isActive ? 'Aktif' : 'Tidak')
+				render: () => `<span>${isActive ? 'Aktif' : 'Tidak'}</span>`
 			}));
 			return renderComponent(Badge, {
 				variant: isActive ? 'success' : 'destructive',
