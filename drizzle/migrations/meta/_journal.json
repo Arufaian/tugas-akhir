@@ -1,118 +1,125 @@
 {
-	"version": "7",
-	"dialect": "postgresql",
-	"entries": [
-		{
-			"idx": 0,
-			"version": "7",
-			"when": 1775989087487,
-			"tag": "0000_fat_bedlam",
-			"breakpoints": true
-		},
-		{
-			"idx": 1,
-			"version": "7",
-			"when": 1776060772712,
-			"tag": "0001_premium_living_lightning",
-			"breakpoints": true
-		},
-		{
-			"idx": 2,
-			"version": "7",
-			"when": 1776062893379,
-			"tag": "0002_create_auth_trigger_for_profiles",
-			"breakpoints": true
-		},
-		{
-			"idx": 3,
-			"version": "7",
-			"when": 1778212203435,
-			"tag": "0003_enable_rls_on_profiles",
-			"breakpoints": true
-		},
-		{
-			"idx": 4,
-			"version": "7",
-			"when": 1779261887283,
-			"tag": "0004_enums_and_hardening",
-			"breakpoints": true
-		},
-		{
-			"idx": 5,
-			"version": "7",
-			"when": 1779267771354,
-			"tag": "0005_sticky_ultragirl",
-			"breakpoints": true
-		},
-		{
-			"idx": 6,
-			"version": "7",
-			"when": 1779268104408,
-			"tag": "0006_powerful_wallow",
-			"breakpoints": true
-		},
-		{
-			"idx": 7,
-			"version": "7",
-			"when": 1779269021074,
-			"tag": "0007_amusing_korvac",
-			"breakpoints": true
-		},
-		{
-			"idx": 8,
-			"version": "7",
-			"when": 1779269317495,
-			"tag": "0008_vengeful_harry_osborn",
-			"breakpoints": true
-		},
-		{
-			"idx": 9,
-			"version": "7",
-			"when": 1779269775390,
-			"tag": "0009_blue_mentor",
-			"breakpoints": true
-		},
-		{
-			"idx": 10,
-			"version": "7",
-			"when": 1779270020790,
-			"tag": "0010_easy_piledriver",
-			"breakpoints": true
-		},
-		{
-			"idx": 11,
-			"version": "7",
-			"when": 1779270496731,
-			"tag": "0011_bitter_thunderball",
-			"breakpoints": true
-		},
-		{
-			"idx": 12,
-			"version": "7",
-			"when": 1779270713320,
-			"tag": "0012_fluffy_ricochet",
-			"breakpoints": true
-		},
-		{
-			"idx": 13,
-			"version": "7",
-			"when": 1779271159374,
-			"tag": "0013_deep_namorita",
-			"breakpoints": true
-		},
-		{
-			"idx": 14,
-			"version": "7",
-			"when": 1780628524778,
-			"tag": "0014_refine_profiles_rls_policies",
-			"breakpoints": true
-		},
-		{
-			"idx": 15,
-			"version": "7",
-			"when": 1780630804611,
-			"tag": "0015_enable_rls_remaining_tables",
-			"breakpoints": true
-		}
-	]
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1775989087487,
+      "tag": "0000_fat_bedlam",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776060772712,
+      "tag": "0001_premium_living_lightning",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776062893379,
+      "tag": "0002_create_auth_trigger_for_profiles",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1778212203435,
+      "tag": "0003_enable_rls_on_profiles",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1779261887283,
+      "tag": "0004_enums_and_hardening",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1779267771354,
+      "tag": "0005_sticky_ultragirl",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779268104408,
+      "tag": "0006_powerful_wallow",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1779269021074,
+      "tag": "0007_amusing_korvac",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1779269317495,
+      "tag": "0008_vengeful_harry_osborn",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1779269775390,
+      "tag": "0009_blue_mentor",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1779270020790,
+      "tag": "0010_easy_piledriver",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1779270496731,
+      "tag": "0011_bitter_thunderball",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1779270713320,
+      "tag": "0012_fluffy_ricochet",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1779271159374,
+      "tag": "0013_deep_namorita",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1780628524778,
+      "tag": "0014_refine_profiles_rls_policies",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1780630804611,
+      "tag": "0015_enable_rls_remaining_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1781694349226,
+      "tag": "0016_outgoing_iron_man",
+      "breakpoints": true
+    }
+  ]
 }
