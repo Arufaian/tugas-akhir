@@ -231,7 +231,7 @@
 				</div>
 			{/if}
 
-			<input name="imgUrl" bind:value={$formData.imgUrl} />
+			<input type="hidden" name="imgUrl" bind:value={$formData.imgUrl} />
 
 			<div class="flex justify-end gap-2">
 				<Button href={resolve('/admin/alternatives')} variant="outline">Batal</Button>
