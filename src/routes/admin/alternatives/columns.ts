@@ -107,7 +107,10 @@ export const columns: ColumnDef<Alternative>[] = [
 		},
 
 		cell: ({ row }) => {
-			return renderComponent(DataTableActions, { id: row.original.id });
+			return renderComponent(DataTableActions, {
+				id: row.original.id,
+				name: row.original.name
+			});
 		},
 		enableHiding: false
 	}
