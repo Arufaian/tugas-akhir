@@ -106,7 +106,11 @@
 			storagePath: uploadData.path
 		});
 
-		$formData.imgUrl = urlData.publicUrl;
+		$formData.img = JSON.stringify({
+			url: urlData.publicUrl,
+			path: uploadData.path,
+			originalName: file.name
+		});
 	};
 
 	const removeFile = async (index: number) => {
@@ -125,7 +129,7 @@
 		}
 
 		files = [...files.slice(0, index), ...files.slice(index + 1)];
-		$formData.imgUrl = '';
+		$formData.img = '';
 	};
 
 	onDestroy(async () => {
@@ -231,7 +235,7 @@
 				</div>
 			{/if}
 
-			<input type="hidden" name="imgUrl" bind:value={$formData.imgUrl} />
+			<input type="hidden" name="img" bind:value={$formData.img} />
 
 			<div class="flex justify-end gap-2">
 				<Button href={resolve('/admin/alternatives')} variant="outline">Batal</Button>

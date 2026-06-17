@@ -4,7 +4,7 @@ import { createAlternativeSchema } from './alternative.schema';
 const validData = {
 	name: 'New Motor',
 	category: 'Matic',
-	imgUrl: 'https://storage.supabase.co/example.jpg'
+	img: JSON.stringify({ url: 'https://storage.supabase.co/example.jpg', path: null })
 };
 
 describe('createAlternativeSchema', () => {
@@ -86,48 +86,38 @@ describe('createAlternativeSchema', () => {
 		});
 	});
 
-	describe('imgUrl validation', () => {
-		it('accepts valid URL', () => {
+	describe('img validation', () => {
+		it('accepts valid JSON img string', () => {
 			const result = createAlternativeSchema.safeParse(validData);
 
 			expect(result.success).toBe(true);
 			if (result.success) {
-				expect(result.data.imgUrl).toBe('https://storage.supabase.co/example.jpg');
+				expect(result.data.img).toBe(
+					JSON.stringify({ url: 'https://storage.supabase.co/example.jpg', path: null })
+				);
 			}
 		});
 
-		it('rejects invalid URL string', () => {
+		it('accepts null img', () => {
 			const result = createAlternativeSchema.safeParse({
 				...validData,
-				imgUrl: 'not-a-url'
-			});
-
-			expect(result.success).toBe(false);
-			if (!result.success) {
-				expect(result.error.issues[0].message).toContain('URL gambar tidak valid');
-			}
-		});
-
-		it('accepts null imgUrl', () => {
-			const result = createAlternativeSchema.safeParse({
-				...validData,
-				imgUrl: null
+				img: null
 			});
 
 			expect(result.success).toBe(true);
 			if (result.success) {
-				expect(result.data.imgUrl).toBeNull();
+				expect(result.data.img).toBeNull();
 			}
 		});
 
-		it('accepts undefined imgUrl', () => {
+		it('accepts undefined img', () => {
 			// eslint-disable-next-line @typescript-eslint/no-unused-vars
-			const { imgUrl, ...dataWithoutImgUrl } = validData;
-			const result = createAlternativeSchema.safeParse(dataWithoutImgUrl);
+			const { img, ...dataWithoutImg } = validData;
+			const result = createAlternativeSchema.safeParse(dataWithoutImg);
 
 			expect(result.success).toBe(true);
 			if (result.success) {
-				expect(result.data.imgUrl).toBeUndefined();
+				expect(result.data.img).toBeUndefined();
 			}
 		});
 	});

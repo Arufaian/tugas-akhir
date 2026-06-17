@@ -37,7 +37,7 @@ export const actions: Actions = {
 				code,
 				name: form.data.name,
 				category: form.data.category || null,
-				imgUrl: form.data.imgUrl && form.data.imgUrl !== '' ? form.data.imgUrl : null
+				img: form.data.img ? JSON.parse(form.data.img) : null
 			};
 
 			await db.insert(alternativesTable).values(data);

@@ -45,15 +45,14 @@ export const columns: ColumnDef<Alternative>[] = [
 	},
 
 	{
-		accessorKey: 'imgUrl',
 		id: 'Image',
 		header: 'Image',
 		cell: ({ row }) => {
-			const imgUrl = row.original.imgUrl;
+			const src = row.original.img?.url ?? '';
 
 			const ImageSnippet = createRawSnippet(() => ({
 				render: () =>
-					`<img src="${imgUrl}" alt="Gambar Alternatif" class="w-16 h-16 object-cover rounded" />`
+					`<img src="${src}" alt="Gambar Alternatif" class="w-16 h-16 object-cover rounded" />`
 			}));
 			return renderSnippet(ImageSnippet);
 		}

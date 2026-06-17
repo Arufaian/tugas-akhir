@@ -39,7 +39,7 @@ export async function seedAlternatives(): Promise<void> {
 		code: a.code,
 		name: a.name,
 		category: a.category,
-		imgUrl: 'https://picsum.photos/200',
+		img: { url: 'https://picsum.photos/200', path: null },
 		isActive: true
 	}));
 

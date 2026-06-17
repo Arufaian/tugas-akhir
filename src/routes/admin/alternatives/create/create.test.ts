@@ -49,7 +49,7 @@ function validFormData() {
 	const fd = new FormData();
 	fd.append('name', 'Motor Test');
 	fd.append('category', 'Classy');
-	fd.append('imgUrl', 'https://example.com/motor.jpg');
+	fd.append('img', JSON.stringify({ url: 'https://example.com/motor.jpg', path: null }));
 	return fd;
 }
 
@@ -78,19 +78,6 @@ describe('create alternative action', () => {
 	it('returns validation error when name is missing', async () => {
 		const fd = new FormData();
 		fd.append('category', 'Classy');
-
-		const result = (await actions.default(
-			createMockEvent(fd) as unknown as ActionsParam
-		)) as unknown as ActionResult;
-
-		expect(result.status).toBe(400);
-		expect(result.data?.form.valid).toBe(false);
-	});
-
-	it('returns validation error for invalid imgUrl', async () => {
-		const fd = new FormData();
-		fd.append('name', 'Motor Test');
-		fd.append('imgUrl', 'not-a-url');
 
 		const result = (await actions.default(
 			createMockEvent(fd) as unknown as ActionsParam
@@ -178,11 +165,11 @@ describe('create alternative action', () => {
 			code: 'A1',
 			name: 'Motor Minimal',
 			category: null,
-			imgUrl: null
+			img: null
 		});
 	});
 
-	it('maps all fields including category and imgUrl', async () => {
+	it('maps all fields including category and img', async () => {
 		mockLimit.mockResolvedValue([]);
 		const mockInsertValues = vi.fn().mockResolvedValue(undefined);
 		mockInsert.mockImplementation(() => ({ values: mockInsertValues }));
@@ -193,14 +180,14 @@ describe('create alternative action', () => {
 			code: 'A1',
 			name: 'Motor Test',
 			category: 'Classy',
-			imgUrl: 'https://example.com/motor.jpg'
+			img: { url: 'https://example.com/motor.jpg', path: null }
 		});
 	});
 
-	it('maps empty string imgUrl to null', async () => {
+	it('maps empty string img to null', async () => {
 		const fd = new FormData();
 		fd.append('name', 'Motor Test');
-		fd.append('imgUrl', '');
+		fd.append('img', '');
 
 		mockLimit.mockResolvedValue([]);
 		const mockInsertValues = vi.fn().mockResolvedValue(undefined);
@@ -208,7 +195,7 @@ describe('create alternative action', () => {
 
 		await actions.default(createMockEvent(fd) as unknown as ActionsParam);
 
-		expect(mockInsertValues).toHaveBeenCalledWith(expect.objectContaining({ imgUrl: null }));
+		expect(mockInsertValues).toHaveBeenCalledWith(expect.objectContaining({ img: null }));
 	});
 
 	it('maps empty string category to null', async () => {
