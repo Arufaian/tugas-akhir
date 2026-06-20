@@ -2,6 +2,7 @@
 	import * as Collapsible from '$lib/components/ui/collapsible/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
+	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 
 	let {
@@ -27,7 +28,10 @@
 	<Sidebar.Menu>
 		{#each items as item (item.title)}
 			{#if item.items}
-				<Collapsible.Root open={item.isActive} class="group/collapsible">
+				<Collapsible.Root
+					open={item.items?.some((s) => page.url.pathname === s.url)}
+					class="group/collapsible"
+				>
 					{#snippet child({ props })}
 						<Sidebar.MenuItem {...props}>
 							<Collapsible.Trigger>
@@ -47,10 +51,11 @@
 								<Sidebar.MenuSub>
 									{#each item.items as subItem (subItem.title)}
 										<Sidebar.MenuSubItem>
-											<Sidebar.MenuSubButton>
+											<Sidebar.MenuSubButton isActive={page.url.pathname === subItem.url}>
 												{#snippet child({ props })}
 													<!-- ponytail: dynamic sidebar URLs can't match SvelteKit route union -->
-												<a href={(resolve as (path: string) => string)(subItem.url)} {...props}>
+													<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+													<a href={(resolve as (path: string) => string)(subItem.url)} {...props}>
 														<span>{subItem.title}</span>
 													</a>
 												{/snippet}
@@ -64,8 +69,9 @@
 				</Collapsible.Root>
 			{:else}
 				<Sidebar.MenuItem>
-					<Sidebar.MenuButton tooltipContent={item.title}>
+					<Sidebar.MenuButton isActive={page.url.pathname === item.url} tooltipContent={item.title}>
 						{#snippet child({ props })}
+							<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 							<a href={(resolve as (path: string) => string)(item.url)} {...props}>
 								{#if item.icon}
 									<item.icon />

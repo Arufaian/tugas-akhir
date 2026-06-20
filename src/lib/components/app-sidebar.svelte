@@ -1,10 +1,7 @@
 <script lang="ts" module>
-	import AudioWaveformIcon from '@lucide/svelte/icons/audio-waveform';
 	import BookOpenIcon from '@lucide/svelte/icons/book-open';
 	import BotIcon from '@lucide/svelte/icons/bot';
 	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
-	import CommandIcon from '@lucide/svelte/icons/command';
-	import GalleryVerticalEndIcon from '@lucide/svelte/icons/gallery-vertical-end';
 	import MapIcon from '@lucide/svelte/icons/map';
 	import Settings2Icon from '@lucide/svelte/icons/settings-2';
 	import FrameIcon from '@lucide/svelte/icons/frame';
@@ -13,27 +10,6 @@
 
 	// This is sample data.
 	const data = {
-		user: {
-			name: 'shadcn',
-			email: 'm@example.com'
-		},
-		teams: [
-			{
-				name: 'Acme Inc',
-				logo: GalleryVerticalEndIcon,
-				plan: 'Enterprise'
-			},
-			{
-				name: 'Acme Corp.',
-				logo: AudioWaveformIcon,
-				plan: 'Startup'
-			},
-			{
-				name: 'Evil Corp.',
-				logo: CommandIcon,
-				plan: 'Free'
-			}
-		],
 		navMain: [
 			{
 				title: 'Dashboard',
@@ -155,7 +131,6 @@
 	import NavMain from './nav-main.svelte';
 	import NavProjects from './nav-projects.svelte';
 	import NavUser from './nav-user.svelte';
-	import TeamSwitcher from './team-switcher.svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import type { ComponentProps } from 'svelte';
 	import type { UserProfileData } from '$lib/types/user-profile';
@@ -174,14 +149,11 @@
 
 <Sidebar.Root bind:ref {collapsible} {...restProps}>
 	<Sidebar.Header>
-		<TeamSwitcher teams={data.teams} />
+		<NavUser {user} />
 	</Sidebar.Header>
 	<Sidebar.Content>
 		<NavMain items={data.navMain} />
 		<NavProjects projects={data.projects} />
 	</Sidebar.Content>
-	<Sidebar.Footer>
-		<NavUser {user} />
-	</Sidebar.Footer>
 	<Sidebar.Rail />
 </Sidebar.Root>
