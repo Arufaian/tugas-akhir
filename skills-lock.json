@@ -1,33 +1,33 @@
 {
-  "version": 1,
-  "skills": {
-    "color-system": {
-      "source": "owl-listener/designer-skills",
-      "sourceType": "github",
-      "skillPath": "ui-design/skills/color-system/SKILL.md",
-      "computedHash": "e273ec32da74094fbb497bd6eb39bbc6340b61584d6c37997d652b30f5ee3f7b"
-    },
-    "frontend-design": {
-      "source": "anthropics/skills",
-      "sourceType": "github",
-      "skillPath": "skills/frontend-design/SKILL.md",
-      "computedHash": "4eabc66183767153e404b39d1b839b1c37f2d82d86f0a0d7e880a579d8d62336"
-    },
-    "shadcn-svelte": {
-      "source": "huntabyte/shadcn-svelte",
-      "sourceType": "github",
-      "skillPath": "skills/shadcn-svelte/SKILL.md",
-      "computedHash": "e2cc56b65eb0c28042934ec7d7b253e842b6e22456917276d53a0c71266303e7"
-    },
-    "supabase": {
-      "source": "supabase/agent-skills",
-      "sourceType": "github",
-      "computedHash": "cb675a889c60172febe84740e7c22b600c8241c390deaff3d368c408f10dffdf"
-    },
-    "supabase-postgres-best-practices": {
-      "source": "supabase/agent-skills",
-      "sourceType": "github",
-      "computedHash": "f4cd7570115d97af6bcb2946eb891a958c8d04a43b479871c9ccadbc670ad058"
-    }
-  }
+	"version": 1,
+	"skills": {
+		"color-system": {
+			"source": "owl-listener/designer-skills",
+			"sourceType": "github",
+			"skillPath": "ui-design/skills/color-system/SKILL.md",
+			"computedHash": "e273ec32da74094fbb497bd6eb39bbc6340b61584d6c37997d652b30f5ee3f7b"
+		},
+		"frontend-design": {
+			"source": "anthropics/skills",
+			"sourceType": "github",
+			"skillPath": "skills/frontend-design/SKILL.md",
+			"computedHash": "4eabc66183767153e404b39d1b839b1c37f2d82d86f0a0d7e880a579d8d62336"
+		},
+		"shadcn-svelte": {
+			"source": "huntabyte/shadcn-svelte",
+			"sourceType": "github",
+			"skillPath": "skills/shadcn-svelte/SKILL.md",
+			"computedHash": "e2cc56b65eb0c28042934ec7d7b253e842b6e22456917276d53a0c71266303e7"
+		},
+		"supabase": {
+			"source": "supabase/agent-skills",
+			"sourceType": "github",
+			"computedHash": "cb675a889c60172febe84740e7c22b600c8241c390deaff3d368c408f10dffdf"
+		},
+		"supabase-postgres-best-practices": {
+			"source": "supabase/agent-skills",
+			"sourceType": "github",
+			"computedHash": "f4cd7570115d97af6bcb2946eb891a958c8d04a43b479871c9ccadbc670ad058"
+		}
+	}
 }

@@ -7,7 +7,7 @@ const alternativeImageSchema = z.object({
 });
 
 export const alternativeSchema = z.object({
-	id: z.string().uuid(),
+	id: z.uuid(),
 	code: z.string().trim().min(1, 'Kode wajib diisi'),
 	name: z.string().trim().min(1, 'Nama wajib diisi'),
 	category: z.string().nullable().optional(),
@@ -28,5 +28,12 @@ export const createAlternativeSchema = z.object({
 
 export type CreateAlternativeInput = z.infer<typeof createAlternativeSchema>;
 export type CreateAlternativeSchema = typeof createAlternativeSchema;
+
+export const updateAlternativeSchema = createAlternativeSchema.extend({
+	isActive: z.boolean().optional()
+});
+
+export type UpdateAlternativeInput = z.infer<typeof updateAlternativeSchema>;
+export type UpdateAlternativeSchema = typeof updateAlternativeSchema;
 
 export type AlternativeImage = z.infer<typeof alternativeImageSchema>;

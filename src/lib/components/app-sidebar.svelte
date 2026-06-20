@@ -4,10 +4,11 @@
 	import BotIcon from '@lucide/svelte/icons/bot';
 	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
 	import CommandIcon from '@lucide/svelte/icons/command';
-	import FrameIcon from '@lucide/svelte/icons/frame';
 	import GalleryVerticalEndIcon from '@lucide/svelte/icons/gallery-vertical-end';
 	import MapIcon from '@lucide/svelte/icons/map';
 	import Settings2Icon from '@lucide/svelte/icons/settings-2';
+	import FrameIcon from '@lucide/svelte/icons/frame';
+	import { LayoutDashboard, Motorbike } from '@lucide/svelte';
 	import SquareTerminalIcon from '@lucide/svelte/icons/square-terminal';
 
 	// This is sample data.
@@ -34,6 +35,16 @@
 			}
 		],
 		navMain: [
+			{
+				title: 'Dashboard',
+				url: '/admin/dashboard',
+				icon: LayoutDashboard
+			},
+			{
+				title: 'Alternatives',
+				url: '/admin/alternatives',
+				icon: Motorbike
+			},
 			{
 				title: 'Playground',
 				url: '#',

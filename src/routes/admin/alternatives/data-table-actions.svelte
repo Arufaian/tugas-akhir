@@ -6,7 +6,8 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import ConfirmDeleteDialog from '$lib/components/confirm-delete-dialog.svelte';
 	import { toast } from 'svelte-sonner';
-	import { invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
 
 	let {
 		id,
@@ -49,7 +50,7 @@
 			{/snippet}
 		</DropdownMenu.Trigger>
 		<DropdownMenu.Content class="mr-4">
-			<DropdownMenu.Item disabled>
+			<DropdownMenu.Item onclick={() => goto(resolve(`/admin/alternatives/${id}/update`))}>
 				<PencilIcon />
 				Edit
 			</DropdownMenu.Item>
@@ -62,9 +63,4 @@
 	</DropdownMenu.Root>
 </div>
 
-<ConfirmDeleteDialog
-	bind:open={showDialog}
-	{name}
-	loading={isDeleting}
-	onConfirm={handleDelete}
-/>
+<ConfirmDeleteDialog bind:open={showDialog} {name} loading={isDeleting} onConfirm={handleDelete} />

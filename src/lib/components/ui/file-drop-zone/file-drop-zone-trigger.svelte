@@ -25,19 +25,19 @@
 		{@render children()}
 	{:else}
 		<div
-			class="hover:bg-accent/25 flex h-48 flex-col place-items-center justify-center gap-2 rounded-lg border border-dashed p-6 transition-all group-aria-disabled/file-drop-zone-trigger:opacity-50 hover:cursor-pointer group-aria-disabled/file-drop-zone-trigger:hover:cursor-not-allowed"
+			class="flex h-48 flex-col place-items-center justify-center gap-2 rounded-lg border border-dashed p-6 transition-all group-aria-disabled/file-drop-zone-trigger:opacity-50 hover:cursor-pointer hover:bg-accent/25 group-aria-disabled/file-drop-zone-trigger:hover:cursor-not-allowed"
 		>
 			<div
-				class="border-border text-muted-foreground flex size-14 place-items-center justify-center rounded-full border border-dashed"
+				class="flex size-14 place-items-center justify-center rounded-full border border-dashed border-border text-muted-foreground"
 			>
 				<UploadIcon class="size-7" />
 			</div>
 			<div class="flex flex-col gap-0.5 text-center">
-				<span class="text-muted-foreground font-medium">
+				<span class="font-medium text-muted-foreground">
 					Drag 'n' drop files here, or click to select files
 				</span>
 				{#if triggerState.rootState.opts.maxFiles.current || triggerState.rootState.opts.maxFileSize.current}
-					<span class="text-muted-foreground/75 text-sm">
+					<span class="text-sm text-muted-foreground/75">
 						{#if triggerState.rootState.opts.maxFiles.current}
 							<span>
 								You can upload {triggerState.rootState.opts.maxFiles.current} files
