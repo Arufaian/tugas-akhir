@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const alternativeImageSchema = z.object({
+export const alternativeImageSchema = z.object({
 	url: z.string(),
 	path: z.string().nullable(),
 	originalName: z.string().optional()

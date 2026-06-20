@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index.js';
 import { alternativesTable } from '$lib/server/db/schema/index.js';
+import type { AlternativeImage } from '$lib/server/db/schema/alternative.js';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -23,9 +24,11 @@ export async function DELETE({ params, locals }) {
 			return json({ message: 'Alternatif tidak ditemukan' }, { status: 404 });
 		}
 
-		if (alternative.img?.path) {
+		// ponytail: jsonb returns {}, assert for shape
+		const img = alternative.img as AlternativeImage | null;
+		if (img?.path) {
 			try {
-				await locals.supabase.storage.from('tugas-akhir').remove([alternative.img.path]);
+				await locals.supabase.storage.from('tugas-akhir').remove([img.path]);
 			} catch (err) {
 				console.warn('Gagal menghapus gambar dari storage:', err);
 			}

@@ -49,7 +49,8 @@
 										<Sidebar.MenuSubItem>
 											<Sidebar.MenuSubButton>
 												{#snippet child({ props })}
-													<a href={resolve(subItem.url)} {...props}>
+													<!-- ponytail: dynamic sidebar URLs can't match SvelteKit route union -->
+												<a href={(resolve as (path: string) => string)(subItem.url)} {...props}>
 														<span>{subItem.title}</span>
 													</a>
 												{/snippet}
@@ -65,7 +66,7 @@
 				<Sidebar.MenuItem>
 					<Sidebar.MenuButton tooltipContent={item.title}>
 						{#snippet child({ props })}
-							<a href={resolve(item.url)} {...props}>
+							<a href={(resolve as (path: string) => string)(item.url)} {...props}>
 								{#if item.icon}
 									<item.icon />
 								{/if}
