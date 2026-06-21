@@ -127,6 +127,13 @@
       "when": 1782019834763,
       "tag": "0017_smart_pixie",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1782020989067,
+      "tag": "0018_last_chimera",
+      "breakpoints": true
     }
   ]
 }

@@ -9,6 +9,7 @@ const criteriaSeed = [
 		unit: 'cc',
 		rawWeight: 4,
 		type: 'benefit' as const,
+		inputType: 'number' as const,
 		orderIndex: 1,
 		description: null as null,
 		isActive: true
@@ -19,6 +20,7 @@ const criteriaSeed = [
 		unit: 'skor',
 		rawWeight: 5,
 		type: 'benefit' as const,
+		inputType: 'tech_features' as const,
 		orderIndex: 2,
 		description: null as null,
 		isActive: true
@@ -29,6 +31,7 @@ const criteriaSeed = [
 		unit: 'km/liter',
 		rawWeight: 2,
 		type: 'benefit' as const,
+		inputType: 'number' as const,
 		orderIndex: 3,
 		description: null as null,
 		isActive: true
@@ -39,6 +42,7 @@ const criteriaSeed = [
 		unit: 'tahun',
 		rawWeight: 3,
 		type: 'benefit' as const,
+		inputType: 'number' as const,
 		orderIndex: 4,
 		description: null as null,
 		isActive: true
@@ -49,6 +53,7 @@ const criteriaSeed = [
 		unit: 'skor',
 		rawWeight: 1,
 		type: 'benefit' as const,
+		inputType: 'scale' as const,
 		orderIndex: 5,
 		description: null as null,
 		isActive: true
@@ -59,6 +64,7 @@ const criteriaSeed = [
 		unit: 'juta rupiah',
 		rawWeight: 5,
 		type: 'cost' as const,
+		inputType: 'number' as const,
 		orderIndex: 6,
 		description: null as null,
 		isActive: true
@@ -69,6 +75,7 @@ const criteriaSeed = [
 		unit: 'skor',
 		rawWeight: 3,
 		type: 'cost' as const,
+		inputType: 'scale' as const,
 		orderIndex: 7,
 		description: null as null,
 		isActive: true
@@ -96,6 +103,7 @@ export async function seedCriteria(): Promise<CriteriaMap> {
 		rawWeight: String(c.rawWeight),
 		normalizedWeight: String(c.normalizedWeight),
 		type: c.type,
+		inputType: c.inputType,
 		orderIndex: c.orderIndex
 	}));
 

@@ -2,7 +2,7 @@
 
 ## 1. Tujuan
 
-Database ini digunakan untuk aplikasi Sistem Pendukung Keputusan (SPK) pemilihan sepeda motor Yamaha menggunakan metode MOORA. Sistem harus menyimpan data pengguna, alternatif sepeda motor, kriteria, nilai alternatif terhadap kriteria, indikator teknologi, riwayat perhitungan, detail normalisasi, nilai optimasi, dan ranking akhir.
+Database ini digunakan untuk aplikasi Sistem Pendukung Keputusan (SPK) pemilihan sepeda motor Yamaha menggunakan metode MOORA. Sistem harus menyimpan data pengguna, alternatif sepeda motor, kriteria, nilai alternatif terhadap kriteria, riwayat perhitungan, detail normalisasi, nilai optimasi, dan ranking akhir.
 
 Database menggunakan Supabase PostgreSQL.
 
@@ -30,8 +30,10 @@ Bagian ini menandai kesesuaian requirement dengan schema yang sudah ada sekarang
 - `profiles.name`: **sudah ada**.
 - `profiles.role` dengan enum `profile_role`: **sudah ada**.
 - `profiles.created_at`, `profiles.updated_at`: **sudah ada**.
-- `profiles.is_active`: **belum ada** (ditandai sebagai **tambahan fase migrasi berikutnya**, bukan blocker untuk desain SPK).
-- Tabel SPK lain (`alternatives`, `criteria`, `alternative_criterion_values`, dst.): **belum dibuat**.
+- `profiles.is_active`: **sudah ada**.
+- Tabel SPK lain (`alternatives`, `criteria`, `alternative_criterion_values`, dst.): **sudah dibuat**.
+- Tabel `technology_features` dan `alternative_technology_features`: **sudah dihapus** — digantikan oleh feature calculator di layer kode (lihat section 4.5).
+- Kolom `input_type` pada `criteria`: **sudah ada** (enum `input_type`).
 - RLS saat ini baru diterapkan di `profiles`: **sudah aktif**, tetapi policy/grants masih perlu hardening pada fase implementasi.
 
 ---
@@ -91,6 +93,12 @@ create type profile_role as enum ('admin', 'sales');
 
 ```sql
 create type criterion_type as enum ('benefit', 'cost');
+```
+
+### `input_type`
+
+```sql
+create type input_type as enum ('number', 'scale', 'tech_features');
 ```
 
 ## 4. Tabel
@@ -173,6 +181,7 @@ Penjelasan fungsi tabel:
 | `raw_weight`        | `numeric(10,4)`  | not null                       | Bobot awal skala 1–5                                                |
 | `normalized_weight` | `numeric(12,9)`  | not null                       | Bobot normalisasi (dihitung di application layer, bukan DB trigger) |
 | `type`              | `criterion_type` | not null                       | `benefit` atau `cost`                                               |
+| `input_type`        | `input_type`     | not null default `'number'`    | Jenis input: `number`, `scale`, atau `tech_features`                |
 | `order_index`       | `integer`        | not null                       | Urutan perhitungan                                                  |
 | `is_active`         | `boolean`        | not null default `true`        | Status kriteria                                                     |
 | `created_at`        | `timestamptz`    | not null default `now()`       | Waktu dibuat                                                        |
@@ -180,15 +189,15 @@ Penjelasan fungsi tabel:
 
 Data awal:
 
-| code | name                     | unit          | raw_weight | normalized_weight | type      | order_index |
-| ---- | ------------------------ | ------------- | ---------: | ----------------: | --------- | ----------: |
-| `C1` | `Kapasitas Mesin`        | `cc`          |          4 |          0.173913 | `benefit` |           1 |
-| `C2` | `Teknologi`              | `skor`        |          5 |          0.217391 | `benefit` |           2 |
-| `C3` | `Konsumsi Bahan Bakar`   | `km/liter`    |          2 |          0.086957 | `benefit` |           3 |
-| `C4` | `Tahun Perakitan`        | `tahun`       |          3 |          0.130435 | `benefit` |           4 |
-| `C5` | `Ketersediaan Sparepart` | `skor`        |          1 |          0.043478 | `benefit` |           5 |
-| `C6` | `Harga`                  | `juta rupiah` |          5 |          0.217391 | `cost`    |           6 |
-| `C7` | `Lama Inden Unit`        | `skor`        |          3 |          0.130435 | `cost`    |           7 |
+| code | name                     | unit          | raw_weight | normalized_weight | type      | input_type       | order_index |
+| ---- | ------------------------ | ------------- | ---------: | ----------------: | --------- | --------------- | ----------: |
+| `C1` | `Kapasitas Mesin`        | `cc`          |          4 |          0.173913 | `benefit` | `number`        |           1 |
+| `C2` | `Teknologi`              | `skor`        |          5 |          0.217391 | `benefit` | `tech_features` |           2 |
+| `C3` | `Konsumsi Bahan Bakar`   | `km/liter`    |          2 |          0.086957 | `benefit` | `number`        |           3 |
+| `C4` | `Tahun Perakitan`        | `tahun`       |          3 |          0.130435 | `benefit` | `number`        |           4 |
+| `C5` | `Ketersediaan Sparepart` | `skor`        |          1 |          0.043478 | `benefit` | `scale`         |           5 |
+| `C6` | `Harga`                  | `juta rupiah` |          5 |          0.217391 | `cost`    | `number`        |           6 |
+| `C7` | `Lama Inden Unit`        | `skor`        |          3 |          0.130435 | `cost`    | `scale`         |           7 |
 
 Catatan:
 
@@ -245,76 +254,50 @@ Catatan:
 
 ---
 
-## 4.5 `technology_features`
+## 4.5 Feature Calculator C2 Teknologi (Application Layer)
 
-Tabel indikator fitur teknologi.
+Kriteria `C2 Teknologi` tidak menggunakan tabel database terpisah. Penilaiannya dilakukan melalui **feature calculator** di layer aplikasi.
 
-Penjelasan fungsi tabel:
+### Definisi Fitur
 
-- Menyimpan daftar fitur teknologi beserta skor kontribusinya.
-- Menjadi kamus fitur yang dipakai lintas alternatif.
-- Mendukung transparansi penilaian kriteria teknologi (C2).
+Daftar fitur teknologi dan skornya didefinisikan sebagai constant di:
 
-| Kolom         | Tipe           | Constraint                     | Keterangan   |
-| ------------- | -------------- | ------------------------------ | ------------ |
-| `id`          | `uuid`         | PK default `gen_random_uuid()` | ID fitur     |
-| `aspect`      | `text`         | not null                       | Aspek fitur  |
-| `name`        | `text`         | not null                       | Nama fitur   |
-| `score`       | `numeric(8,2)` | not null                       | Skor fitur   |
-| `description` | `text`         | nullable                       | Deskripsi    |
-| `is_active`   | `boolean`      | not null default `true`        | Status fitur |
-| `created_at`  | `timestamptz`  | not null default `now()`       | Waktu dibuat |
-| `updated_at`  | `timestamptz`  | not null default `now()`       | Waktu diubah |
+```
+$lib/constants/technology-features.ts
+```
 
-Data awal:
+```ts
+export const TECHNOLOGY_FEATURES = [
+  { name: 'ABS', score: 15, aspect: 'Keselamatan' },
+  { name: 'TCS', score: 15, aspect: 'Keselamatan' },
+  { name: 'VVA', score: 10, aspect: 'Performa' },
+  { name: 'YECVT', score: 25, aspect: 'Performa' },
+  { name: 'Y-Shift/Riding Mode', score: 5, aspect: 'Performa' },
+  { name: 'Hybrid Power Assist', score: 10, aspect: 'Efisiensi Tambahan' },
+  { name: 'SSS', score: 5, aspect: 'Efisiensi Tambahan' },
+  { name: 'Smart Key', score: 5, aspect: 'Ekosistem Digital' },
+  { name: 'Y-Connect', score: 5, aspect: 'Ekosistem Digital' },
+  { name: 'TFT Display', score: 5, aspect: 'Ekosistem Digital' },
+] as const; // total: 100
+```
 
-| aspect               | name                  | score |
-| -------------------- | --------------------- | ----: |
-| `Keselamatan`        | `ABS`                 |    15 |
-| `Keselamatan`        | `TCS`                 |    15 |
-| `Performa`           | `VVA`                 |    10 |
-| `Performa`           | `YECVT`               |    25 |
-| `Performa`           | `Y-Shift/Riding Mode` |     5 |
-| `Efisiensi Tambahan` | `Hybrid Power Assist` |    10 |
-| `Efisiensi Tambahan` | `SSS`                 |     5 |
-| `Ekosistem Digital`  | `Smart Key`           |     5 |
-| `Ekosistem Digital`  | `Y-Connect`           |     5 |
-| `Ekosistem Digital`  | `TFT Display`         |     5 |
+### Alur Input
 
----
+1. Form input C2 menampilkan **checklist fitur** (bukan dropdown/radio).
+2. User mencentang fitur yang dimiliki motor → JavaScript menjumlahkan skor otomatis.
+3. Hasil penjumlahan disimpan sebagai `raw_value` C2 di `alternative_criterion_values`.
+4. Skor maksimal adalah 100.
 
-## 4.6 `alternative_technology_features`
+### Keuntungan Pendekatan
 
-Tabel relasi alternatif dan fitur teknologi.
-
-Penjelasan fungsi tabel:
-
-- Menghubungkan tiap alternatif dengan fitur-fitur teknologi yang dimiliki.
-- Menentukan fitur aktif per alternatif lewat `is_available`.
-- Menjadi dasar audit bagaimana nilai C2 terbentuk dari fitur yang benar-benar tersedia.
-
-| Kolom                   | Tipe          | Constraint                             | Keterangan                |
-| ----------------------- | ------------- | -------------------------------------- | ------------------------- |
-| `id`                    | `uuid`        | PK default `gen_random_uuid()`         | ID relasi                 |
-| `alternative_id`        | `uuid`        | FK `alternatives(id)`, not null        | Alternatif                |
-| `technology_feature_id` | `uuid`        | FK `technology_features(id)`, not null | Fitur                     |
-| `is_available`          | `boolean`     | not null default `false`               | Status ketersediaan fitur |
-| `created_at`            | `timestamptz` | not null default `now()`               | Waktu dibuat              |
-| `updated_at`            | `timestamptz` | not null default `now()`               | Waktu diubah              |
-
-Constraint:
-
-- `unique(alternative_id, technology_feature_id)`
-
-Catatan:
-
-- Jika `is_available = true`, skor fitur dihitung.
-- Total skor fitur aktif per alternatif harus sama dengan nilai `C2 Teknologi` di `alternative_criterion_values`.
-- Fungsi spesifik tabel ini: menyimpan relasi many-to-many motor dan fitur teknologi agar nilai `C2 Teknologi` transparan, dapat diaudit, dan tidak menjadi angka black-box.
+- **0 tabel DB tambahan** — tidak perlu migrasi, RLS, atau sync data.
+- **Skoring objektif** — nilai C2 berdasarkan fitur konkret, bukan subjektivitas.
+- **Fitur mudah diubah** — edit satu file constant, tanpa deploy DB migration.
+- **Transparan** — user melihat fitur mana yang berkontribusi ke skor.
 
 ---
 
-## 4.7 `criterion_scales`
+## 4.6 `criterion_scales`
 
 Tabel skala untuk kriteria kualitatif.
 
@@ -360,7 +343,7 @@ Data awal C7 Lama Inden Unit:
 
 ---
 
-## 4.8 `calculation_runs`
+## 4.7 `calculation_runs`
 
 Tabel riwayat proses perhitungan MOORA.
 
@@ -387,7 +370,7 @@ Catatan:
 
 ---
 
-## 4.9 `calculation_details`
+## 4.8 `calculation_details`
 
 Tabel detail perhitungan per alternatif dan per kriteria.
 
@@ -417,7 +400,7 @@ Constraint:
 
 ---
 
-## 4.10 `calculation_results`
+## 4.9 `calculation_results`
 
 Tabel hasil akhir MOORA per alternatif dalam satu run.
 
@@ -460,18 +443,14 @@ profiles
   1 ── * calculation_runs
 
 alternatives
-  1 ── * alternative_criterion_values
-  1 ── * alternative_technology_features
-  1 ── * calculation_details
-  1 ── * calculation_results
+   1 ── * alternative_criterion_values
+   1 ── * calculation_details
+   1 ── * calculation_results
 
 criteria
-  1 ── * alternative_criterion_values
-  1 ── * criterion_scales
-  1 ── * calculation_details
-
-technology_features
-  1 ── * alternative_technology_features
+   1 ── * alternative_criterion_values
+   1 ── * criterion_scales
+   1 ── * calculation_details
 
 calculation_runs
   1 ── * calculation_details
@@ -515,13 +494,13 @@ Catatan:
 2. `alternatives`
 3. `criteria`
 4. `alternative_criterion_values`
-5. `technology_features`
-6. `alternative_technology_features`
-7. `criterion_scales`
-8. `calculation_runs`
-9. `calculation_details`
-10. `calculation_results`
-11. `auth.users` (sebagai entitas referensi dari Supabase Auth)
+5. `criterion_scales`
+6. `calculation_runs`
+7. `calculation_details`
+8. `calculation_results`
+9. `auth.users` (sebagai entitas referensi dari Supabase Auth)
+
+> **Catatan:** C2 Teknologi menggunakan feature calculator di application layer (`$lib/constants/technology-features.ts`), bukan entitas database terpisah.
 
 ### C. Relasi dan Kardinalitas (untuk label di garis relasi)
 
@@ -530,18 +509,15 @@ Catatan:
 3. `alternatives` **1 - M** `alternative_criterion_values`
 4. `criteria` **1 - M** `alternative_criterion_values`
 5. `criteria` **1 - M** `criterion_scales`
-6. `alternatives` **1 - M** `alternative_technology_features`
-7. `technology_features` **1 - M** `alternative_technology_features`
-8. `calculation_runs` **1 - M** `calculation_details`
-9. `alternatives` **1 - M** `calculation_details`
-10. `criteria` **1 - M** `calculation_details`
-11. `calculation_runs` **1 - M** `calculation_results`
-12. `alternatives` **1 - M** `calculation_results`
+6. `calculation_runs` **1 - M** `calculation_details`
+7. `alternatives` **1 - M** `calculation_details`
+8. `criteria` **1 - M** `calculation_details`
+9. `calculation_runs` **1 - M** `calculation_results`
+10. `alternatives` **1 - M** `calculation_results`
 
 Catatan konseptual:
 
 - Relasi `alternatives` ke `criteria` secara logis adalah **M - N**, yang direalisasikan oleh entitas asosiasi `alternative_criterion_values`.
-- Relasi `alternatives` ke `technology_features` secara logis adalah **M - N**, yang direalisasikan oleh entitas asosiasi `alternative_technology_features`.
 
 ### D. Atribut Kunci yang Perlu Ditonjolkan di ERD
 
@@ -566,7 +542,7 @@ Gunakan penanda visual yang konsisten:
 
 - PK: `id`
 - UK: `code`
-- Atribut penting: `name`, `unit`, `raw_weight`, `normalized_weight`, `type`, `order_index`, `is_active`, `created_at`, `updated_at`
+- Atribut penting: `name`, `unit`, `raw_weight`, `normalized_weight`, `type`, `input_type`, `order_index`, `is_active`, `created_at`, `updated_at`
 
 #### `alternative_criterion_values` (entitas asosiasi)
 
@@ -575,19 +551,6 @@ Gunakan penanda visual yang konsisten:
 - FK: `criterion_id` -> `criteria.id`
 - UK komposit: (`alternative_id`, `criterion_id`)
 - Atribut penting: `raw_value`, `label_value`, `created_at`, `updated_at`
-
-#### `technology_features`
-
-- PK: `id`
-- Atribut penting: `aspect`, `name`, `score`, `description`, `is_active`, `created_at`, `updated_at`
-
-#### `alternative_technology_features` (entitas asosiasi)
-
-- PK: `id`
-- FK: `alternative_id` -> `alternatives.id`
-- FK: `technology_feature_id` -> `technology_features.id`
-- UK komposit: (`alternative_id`, `technology_feature_id`)
-- Atribut penting: `is_available`, `created_at`, `updated_at`
 
 #### `criterion_scales`
 
@@ -620,8 +583,8 @@ Gunakan penanda visual yang konsisten:
 
 ### E. Saran Tata Letak ERD (Agar Mudah Dibaca)
 
-1. Letakkan tabel master di kiri/atas: `profiles`, `alternatives`, `criteria`, `technology_features`.
-2. Letakkan tabel asosiasi di tengah: `alternative_criterion_values`, `alternative_technology_features`, `criterion_scales`.
+1. Letakkan tabel master di kiri/atas: `profiles`, `alternatives`, `criteria`.
+2. Letakkan tabel asosiasi di tengah: `alternative_criterion_values`, `criterion_scales`.
 3. Letakkan tabel histori perhitungan di kanan/bawah: `calculation_runs`, `calculation_details`, `calculation_results`.
 4. Hindari garis relasi saling silang; prioritaskan keterbacaan alur:
    - master data -> matriks penilaian -> run perhitungan -> hasil ranking.
@@ -630,7 +593,7 @@ Gunakan penanda visual yang konsisten:
 
 - ERD ini fokus pada model data logikal untuk kebutuhan SPK MOORA.
 - RLS policy, trigger, function, dan view (`v_alternative_matrix`, `v_latest_ranking`) tidak wajib digambar sebagai entitas ERD.
-- Enum (`profile_role`, `criterion_type`) boleh ditampilkan sebagai catatan di sisi diagram.
+- Enum (`profile_role`, `criterion_type`, `input_type`) boleh ditampilkan sebagai catatan di sisi diagram.
 
 ---
 
@@ -727,8 +690,6 @@ Aktifkan RLS pada semua tabel.
 | `alternatives`                    | authenticated users         | admin only                           |
 | `criteria`                        | authenticated users         | admin only                           |
 | `alternative_criterion_values`    | authenticated users         | admin only                           |
-| `technology_features`             | authenticated users         | admin only                           |
-| `alternative_technology_features` | authenticated users         | admin only                           |
 | `criterion_scales`                | authenticated users         | admin only                           |
 | `calculation_runs`                | admin all, sales own        | sales insert own, admin all          |
 | `calculation_details`             | admin all, sales own run    | via server/RPC only                  |
@@ -765,4 +726,4 @@ Jika ingin implementasi cepat, buat minimal:
 6. `calculation_details`
 7. `calculation_results`
 
-Tabel `technology_features` dan `alternative_technology_features` dapat dibuat setelah MVP, tetapi lebih baik dibuat dari awal jika penilaian teknologi ingin transparan.
+> **Catatan:** C2 Teknologi dinilai melalui feature calculator di application layer (`$lib/constants/technology-features.ts`), bukan tabel DB terpisah.
