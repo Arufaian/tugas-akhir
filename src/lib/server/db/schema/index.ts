@@ -3,8 +3,6 @@ export * from './profile';
 export * from './alternative';
 export * from './criterion';
 export * from './criterion-scale';
-export * from './technology-feature';
-export * from './alternative-technology-feature';
 export * from './alternative-criterion-value';
 export * from './calculation-run';
 export * from './calculation-detail';

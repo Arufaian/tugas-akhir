@@ -2,7 +2,6 @@ import { db } from '../index';
 import { alternativesTable } from '../schema';
 import { seedAlternatives } from './alternatives';
 import { seedCriteria } from './criteria';
-import { seedTechnologyFeatures } from './technology-features';
 import { seedCriterionScales } from './criterion-scales';
 
 async function main() {
@@ -13,7 +12,6 @@ async function main() {
 	}
 
 	const criteriaMap = await seedCriteria();
-	await seedTechnologyFeatures();
 	await seedCriterionScales(criteriaMap);
 	await seedAlternatives();
 
