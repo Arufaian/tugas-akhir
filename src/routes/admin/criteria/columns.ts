@@ -5,7 +5,7 @@ import {
 	renderSnippet,
 	DataTableColumnHeader
 } from '$lib/components/ui/data-table/index.js';
-import { Badge } from '$lib/components/ui/badge/index.js';
+import { Badge, type BadgeVariant } from '$lib/components/ui/badge/index.js';
 import type { Criterion } from '$lib/validations/criterion.schema.js';
 
 export const columns: ColumnDef<Criterion>[] = [
@@ -53,7 +53,7 @@ export const columns: ColumnDef<Criterion>[] = [
 		header: ({ column }) =>
 			renderComponent(DataTableColumnHeader, {
 				column: column as Column<unknown, unknown>,
-				title: 'Input'
+				title: 'Input type'
 			}),
 		cell: ({ row }) => {
 			const type = row.original.inputType;
@@ -62,10 +62,15 @@ export const columns: ColumnDef<Criterion>[] = [
 				scale: 'Skala',
 				tech_features: 'Fitur'
 			};
+			const variants: Record<string, BadgeVariant> = {
+				number: 'default',
+				scale: 'warning',
+				tech_features: 'info'
+			};
 			const children = createRawSnippet(() => ({
 				render: () => `<span>${labels[type] ?? type}</span>`
 			}));
-			return renderComponent(Badge, { variant: 'secondary', children });
+			return renderComponent(Badge, { variant: variants[type] ?? 'secondary', children });
 		},
 		filterFn: (row, _columnId, filterValue: string[]) => {
 			if (!filterValue?.length) return true;
@@ -77,8 +82,32 @@ export const columns: ColumnDef<Criterion>[] = [
 		header: ({ column }) =>
 			renderComponent(DataTableColumnHeader, {
 				column: column as Column<unknown, unknown>,
-				title: 'Bobot'
-			})
+				title: 'Bobot skala',
+				class: 'text-center justify-center'
+			}),
+		cell: ({ row }) => {
+			const snippet = createRawSnippet(() => ({
+				render: () =>
+					`<div class="text-center">${parseFloat(row.original.rawWeight).toString()}</div>`
+			}));
+			return renderSnippet(snippet);
+		}
+	},
+	{
+		accessorKey: 'normalizedWeight',
+		header: ({ column }) =>
+			renderComponent(DataTableColumnHeader, {
+				column: column as Column<unknown, unknown>,
+				title: 'Bobot normal',
+				class: 'text-center justify-center'
+			}),
+		cell: ({ row }) => {
+			const snippet = createRawSnippet(() => ({
+				render: () =>
+					`<div class="text-center">${(parseFloat(row.original.normalizedWeight) * 100).toFixed(2)}%</div>`
+			}));
+			return renderSnippet(snippet);
+		}
 	},
 	{
 		accessorKey: 'isActive',
