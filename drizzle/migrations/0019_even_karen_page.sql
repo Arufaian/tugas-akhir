@@ -1,0 +1,1 @@
+ALTER TABLE "criteria" ALTER COLUMN "unit" SET NOT NULL;

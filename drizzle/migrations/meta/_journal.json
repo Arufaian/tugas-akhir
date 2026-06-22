@@ -134,6 +134,13 @@
       "when": 1782020989067,
       "tag": "0018_last_chimera",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1782041708254,
+      "tag": "0019_even_karen_page",
+      "breakpoints": true
     }
   ]
 }

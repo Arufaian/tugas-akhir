@@ -16,4 +16,19 @@ export const criterionSchema = z.object({
 	updatedAt: z.date()
 });
 
+export const createCriterionSchema = z.object({
+	name: z.string().trim().min(1, 'Nama wajib diisi'),
+	description: z.string().optional(),
+	unit: z.string().min(1, 'Satuan wajib diisi'),
+	rawWeight: z
+		.string()
+		.default('3')
+		.refine((val) => ['1', '2', '3', '4', '5'].includes(val), 'Bobot harus antara 1-5'),
+	type: z.enum(['benefit', 'cost']).default('benefit'),
+	inputType: z.enum(['number', 'scale', 'tech_features']).default('number')
+});
+
 export type Criterion = z.infer<typeof criterionSchema>;
+
+export type CreateCriterionInput = z.infer<typeof createCriterionSchema>;
+export type CreateCriterionSchema = typeof createCriterionSchema;

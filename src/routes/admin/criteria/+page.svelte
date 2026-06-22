@@ -2,7 +2,8 @@
 	import { DataTable } from '$lib/components/ui/data-table/index.js';
 	import { columns } from './columns.js';
 	import { Card, CardContent } from '$lib/components/ui/card/index.js';
-	import { Ruler, ArrowUp, ArrowDown } from '@lucide/svelte';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import { Ruler, ArrowUp, ArrowDown, Plus } from '@lucide/svelte';
 
 	let { data } = $props();
 
@@ -43,6 +44,15 @@
 				{data.total}
 			</span>
 			<span class="text-xs text-muted-foreground/70">kriteria</span>
+			<Button
+				variant="outline"
+				size="sm"
+				class="text-primary hover:bg-primary/10"
+				href="/admin/criteria/create"
+			>
+				<Plus class="size-3.5" />
+				Tambah
+			</Button>
 		</CardContent>
 	</Card>
 
