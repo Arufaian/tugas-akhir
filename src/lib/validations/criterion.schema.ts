@@ -28,7 +28,11 @@ export const createCriterionSchema = z.object({
 	inputType: z.enum(['number', 'scale', 'tech_features']).default('number')
 });
 
+export const updateCriterionSchema = createCriterionSchema;
+
 export type Criterion = z.infer<typeof criterionSchema>;
 
 export type CreateCriterionInput = z.infer<typeof createCriterionSchema>;
 export type CreateCriterionSchema = typeof createCriterionSchema;
+export type UpdateCriterionInput = z.infer<typeof updateCriterionSchema>;
+export type UpdateCriterionSchema = typeof updateCriterionSchema;
