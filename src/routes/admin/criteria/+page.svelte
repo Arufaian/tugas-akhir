@@ -3,9 +3,15 @@
 	import { columns } from './columns.js';
 	import { Card, CardContent } from '$lib/components/ui/card/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { Ruler, ArrowUp, ArrowDown, Plus } from '@lucide/svelte';
+	import { Ruler, ArrowUp, ArrowDown, Plus, RotateCcw } from '@lucide/svelte';
+	import { toast } from 'svelte-sonner';
+	import { enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
+	import { Spinner } from '$lib/components/ui/spinner/index.js';
 
 	let { data } = $props();
+
+	let recalculating = $state(false);
 
 	const typeOptions = [
 		{ value: 'benefit', label: 'Benefit' },
@@ -22,7 +28,6 @@
 		{ value: 'true', label: 'Aktif' },
 		{ value: 'false', label: 'Tidak' }
 	];
-
 </script>
 
 <svelte:head>
@@ -53,6 +58,39 @@
 				<Plus class="size-3.5" />
 				Tambah
 			</Button>
+			<form
+				method="POST"
+				action="?/normalize"
+				use:enhance={() => {
+					recalculating = true;
+					return async ({ result }) => {
+						recalculating = false;
+						if (result.type === 'success' && (result.data as { success?: boolean })?.success) {
+							toast.success('Bobot berhasil dihitung ulang');
+							await invalidateAll();
+						} else if (result.type === 'failure') {
+							toast.error(
+								(result.data as { error?: string })?.error ?? 'Gagal menghitung ulang bobot'
+							);
+						}
+					};
+				}}
+			>
+				<Button
+					variant="outline"
+					class="w-full text-primary hover:bg-primary/10"
+					type="submit"
+					disabled={recalculating}
+				>
+					{#if recalculating}
+						<Spinner class="size-3.5" />
+						Menghitung...
+					{:else}
+						<RotateCcw class="size-3.5" />
+						Hitung Ulang Bobot
+					{/if}
+				</Button>
+			</form>
 		</CardContent>
 	</Card>
 
