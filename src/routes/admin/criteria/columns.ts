@@ -7,6 +7,7 @@ import {
 } from '$lib/components/ui/data-table/index.js';
 import { Badge, type BadgeVariant } from '$lib/components/ui/badge/index.js';
 import type { Criterion } from '$lib/validations/criterion.schema.js';
+import DataTableActions from './data-table-actions.svelte';
 
 export const columns: ColumnDef<Criterion>[] = [
 	{
@@ -109,6 +110,7 @@ export const columns: ColumnDef<Criterion>[] = [
 			return renderSnippet(snippet);
 		}
 	},
+
 	{
 		accessorKey: 'isActive',
 		id: 'Status',
@@ -127,5 +129,22 @@ export const columns: ColumnDef<Criterion>[] = [
 			if (!filterValue?.length) return true;
 			return filterValue.includes(String(row.original.isActive));
 		}
+	},
+
+	{
+		id: 'actions',
+		header: () => {
+			const actionsHeaderSnippet = createRawSnippet(() => ({
+				render: () => '<div class="text-center">Actions</div>'
+			}));
+			return renderSnippet(actionsHeaderSnippet);
+		},
+		cell: ({ row }) => {
+			return renderComponent(DataTableActions, {
+				id: row.original.id,
+				name: row.original.name
+			});
+		},
+		enableHiding: false
 	}
 ];

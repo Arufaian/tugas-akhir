@@ -90,6 +90,12 @@
 						Hitung Ulang Bobot
 					{/if}
 				</Button>
+				{#if data.needsNormalization}
+					<div class="flex items-center gap-1.5">
+						<span class="inline-flex h-2 w-2 animate-pulse rounded-full bg-amber-500"></span>
+						<span class="text-xs text-muted-foreground">Bobot perlu disesuaikan</span>
+					</div>
+				{/if}
 			</form>
 		</CardContent>
 	</Card>

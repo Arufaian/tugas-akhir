@@ -11,7 +11,12 @@ export async function load() {
 	const benefitCount = rows.filter((c) => c.type === 'benefit').length;
 	const costCount = rows.filter((c) => c.type === 'cost').length;
 
-	return { criteria: rows, total, benefitCount, costCount };
+	// ponytail: sum check — sum should be ~1.0, pulse button if stale
+	const normalizedSum = rows.reduce((s, r) => s + Number(r.normalizedWeight), 0);
+	const hasZeroWeight = rows.some((r) => r.isActive && Number(r.normalizedWeight) === 0);
+	const needsNormalization = Math.abs(normalizedSum - 1) > 0.0001 || hasZeroWeight;
+
+	return { criteria: rows, total, benefitCount, costCount, needsNormalization };
 }
 
 export const actions = {
