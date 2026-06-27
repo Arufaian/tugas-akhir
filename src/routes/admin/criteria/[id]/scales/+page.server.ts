@@ -54,8 +54,17 @@ export const actions = {
 				orderIndex: nextOrder.max
 			});
 		} catch (err) {
-			const messageText = err instanceof Error ? err.message : 'Gagal menyimpan skala';
-			return message(form, { type: 'error', text: messageText }, { status: 500 });
+			const isUniqueViolation = (err as { cause?: { code?: string } })?.cause?.code === '23505';
+			const messageText = isUniqueViolation
+				? `Nilai "${form.data.value}" sudah ada`
+				: err instanceof Error
+					? err.message
+					: 'Gagal menyimpan skala';
+			return message(
+				form,
+				{ type: 'error', text: messageText },
+				{ status: isUniqueViolation ? 409 : 500 }
+			);
 		}
 
 		return message(form, { type: 'success', text: 'Skala berhasil ditambahkan' });
