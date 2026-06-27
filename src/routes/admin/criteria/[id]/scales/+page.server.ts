@@ -1,7 +1,10 @@
-import { error } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
+import { superValidate, message } from 'sveltekit-superforms';
+import { zod4 } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db/index.js';
 import { criteriaTable, criterionScalesTable } from '$lib/server/db/schema/index.js';
-import { eq, asc } from 'drizzle-orm';
+import { eq, asc, sql } from 'drizzle-orm';
+import { createCriterionScaleSchema } from '$lib/validations/criterion-scale.schema.js';
 
 export async function load({ params }) {
 	const { id } = params;
@@ -22,6 +25,39 @@ export async function load({ params }) {
 
 	return {
 		scales: scales.map((s) => ({ ...s, value: Number(s.value) })),
-		criterion: criterion
+		criterion: criterion,
+		form: await superValidate(zod4(createCriterionScaleSchema))
 	};
 }
+
+export const actions = {
+	create: async (event) => {
+		const form = await superValidate(event, zod4(createCriterionScaleSchema));
+
+		if (!form.valid) {
+			return fail(400, { form });
+		}
+
+		try {
+			const [nextOrder] = await db
+				.select({
+					max: sql<number>`COALESCE(MAX(${criterionScalesTable.orderIndex}), 0) + 1`
+				})
+				.from(criterionScalesTable)
+				.where(eq(criterionScalesTable.criterionId, event.params.id));
+
+			await db.insert(criterionScalesTable).values({
+				criterionId: event.params.id,
+				label: form.data.label,
+				value: String(form.data.value),
+				description: form.data.description ?? null,
+				orderIndex: nextOrder.max
+			});
+		} catch (err) {
+			const messageText = err instanceof Error ? err.message : 'Gagal menyimpan skala';
+			return message(form, { type: 'error', text: messageText }, { status: 500 });
+		}
+
+		return message(form, { type: 'success', text: 'Skala berhasil ditambahkan' });
+	}
+};
