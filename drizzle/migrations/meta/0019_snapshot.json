@@ -1,815 +1,748 @@
 {
-  "id": "dc4c23cf-4e75-4a08-bccf-327560c646e5",
-  "prevId": "e7d3335c-58f4-48c3-88cc-fc8f7b7742e6",
-  "version": "7",
-  "dialect": "postgresql",
-  "tables": {
-    "auth.users": {
-      "name": "users",
-      "schema": "auth",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.profiles": {
-      "name": "profiles",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "role": {
-          "name": "role",
-          "type": "profile_role",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'sales'"
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "profiles_id_users_id_fk": {
-          "name": "profiles_id_users_id_fk",
-          "tableFrom": "profiles",
-          "tableTo": "users",
-          "schemaTo": "auth",
-          "columnsFrom": [
-            "id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.alternatives": {
-      "name": "alternatives",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "code": {
-          "name": "code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "category": {
-          "name": "category",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "img": {
-          "name": "img",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "alternatives_code_unique": {
-          "name": "alternatives_code_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.criteria": {
-      "name": "criteria",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "code": {
-          "name": "code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "unit": {
-          "name": "unit",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "raw_weight": {
-          "name": "raw_weight",
-          "type": "numeric(10, 4)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "normalized_weight": {
-          "name": "normalized_weight",
-          "type": "numeric(12, 9)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "type": {
-          "name": "type",
-          "type": "criterion_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "input_type": {
-          "name": "input_type",
-          "type": "input_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'number'"
-        },
-        "order_index": {
-          "name": "order_index",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "criteria_code_unique": {
-          "name": "criteria_code_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.criterion_scales": {
-      "name": "criterion_scales",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "criterion_id": {
-          "name": "criterion_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "label": {
-          "name": "label",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "value": {
-          "name": "value",
-          "type": "numeric(10, 4)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "order_index": {
-          "name": "order_index",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "criterion_scales_criterion_id_criteria_id_fk": {
-          "name": "criterion_scales_criterion_id_criteria_id_fk",
-          "tableFrom": "criterion_scales",
-          "tableTo": "criteria",
-          "columnsFrom": [
-            "criterion_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.alternative_criterion_values": {
-      "name": "alternative_criterion_values",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "alternative_id": {
-          "name": "alternative_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "criterion_id": {
-          "name": "criterion_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "raw_value": {
-          "name": "raw_value",
-          "type": "numeric(14, 4)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "label_value": {
-          "name": "label_value",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "alternative_criterion_values_alternative_id_alternatives_id_fk": {
-          "name": "alternative_criterion_values_alternative_id_alternatives_id_fk",
-          "tableFrom": "alternative_criterion_values",
-          "tableTo": "alternatives",
-          "columnsFrom": [
-            "alternative_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "alternative_criterion_values_criterion_id_criteria_id_fk": {
-          "name": "alternative_criterion_values_criterion_id_criteria_id_fk",
-          "tableFrom": "alternative_criterion_values",
-          "tableTo": "criteria",
-          "columnsFrom": [
-            "criterion_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "alternative_criterion_values_alternative_criterion_unique": {
-          "name": "alternative_criterion_values_alternative_criterion_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "alternative_id",
-            "criterion_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "alternative_criterion_values_raw_value_non_negative": {
-          "name": "alternative_criterion_values_raw_value_non_negative",
-          "value": "\"alternative_criterion_values\".\"raw_value\" >= 0"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.calculation_runs": {
-      "name": "calculation_runs",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "run_name": {
-          "name": "run_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "criteria_count": {
-          "name": "criteria_count",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "alternative_count": {
-          "name": "alternative_count",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "note": {
-          "name": "note",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "calculation_runs_created_by_profiles_id_fk": {
-          "name": "calculation_runs_created_by_profiles_id_fk",
-          "tableFrom": "calculation_runs",
-          "tableTo": "profiles",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "calculation_runs_criteria_count_positive": {
-          "name": "calculation_runs_criteria_count_positive",
-          "value": "\"calculation_runs\".\"criteria_count\" > 0"
-        },
-        "calculation_runs_alternative_count_positive": {
-          "name": "calculation_runs_alternative_count_positive",
-          "value": "\"calculation_runs\".\"alternative_count\" > 0"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.calculation_details": {
-      "name": "calculation_details",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "calculation_run_id": {
-          "name": "calculation_run_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "alternative_id": {
-          "name": "alternative_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "criterion_id": {
-          "name": "criterion_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "raw_value": {
-          "name": "raw_value",
-          "type": "numeric(14, 4)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "denominator": {
-          "name": "denominator",
-          "type": "numeric(18, 9)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "normalized_value": {
-          "name": "normalized_value",
-          "type": "numeric(18, 9)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "weight": {
-          "name": "weight",
-          "type": "numeric(12, 9)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "weighted_value": {
-          "name": "weighted_value",
-          "type": "numeric(18, 9)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "criterionType": {
-          "name": "criterionType",
-          "type": "criterion_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "calculation_details_calculation_run_id_calculation_runs_id_fk": {
-          "name": "calculation_details_calculation_run_id_calculation_runs_id_fk",
-          "tableFrom": "calculation_details",
-          "tableTo": "calculation_runs",
-          "columnsFrom": [
-            "calculation_run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "calculation_details_alternative_id_alternatives_id_fk": {
-          "name": "calculation_details_alternative_id_alternatives_id_fk",
-          "tableFrom": "calculation_details",
-          "tableTo": "alternatives",
-          "columnsFrom": [
-            "alternative_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "calculation_details_criterion_id_criteria_id_fk": {
-          "name": "calculation_details_criterion_id_criteria_id_fk",
-          "tableFrom": "calculation_details",
-          "tableTo": "criteria",
-          "columnsFrom": [
-            "criterion_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "calculation_details_run_alternative_criterion_unique": {
-          "name": "calculation_details_run_alternative_criterion_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "calculation_run_id",
-            "alternative_id",
-            "criterion_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.calculation_results": {
-      "name": "calculation_results",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "calculation_run_id": {
-          "name": "calculation_run_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "alternative_id": {
-          "name": "alternative_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "total_benefit": {
-          "name": "total_benefit",
-          "type": "numeric(18, 9)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "total_cost": {
-          "name": "total_cost",
-          "type": "numeric(18, 9)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "optimization_score": {
-          "name": "optimization_score",
-          "type": "numeric(18, 9)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "rank": {
-          "name": "rank",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "calculation_results_calculation_run_id_calculation_runs_id_fk": {
-          "name": "calculation_results_calculation_run_id_calculation_runs_id_fk",
-          "tableFrom": "calculation_results",
-          "tableTo": "calculation_runs",
-          "columnsFrom": [
-            "calculation_run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "calculation_results_alternative_id_alternatives_id_fk": {
-          "name": "calculation_results_alternative_id_alternatives_id_fk",
-          "tableFrom": "calculation_results",
-          "tableTo": "alternatives",
-          "columnsFrom": [
-            "alternative_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "calculation_results_run_alternative_unique": {
-          "name": "calculation_results_run_alternative_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "calculation_run_id",
-            "alternative_id"
-          ]
-        },
-        "calculation_results_run_rank_unique": {
-          "name": "calculation_results_run_rank_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "calculation_run_id",
-            "rank"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "calculation_results_rank_positive": {
-          "name": "calculation_results_rank_positive",
-          "value": "\"calculation_results\".\"rank\" > 0"
-        }
-      },
-      "isRLSEnabled": false
-    }
-  },
-  "enums": {
-    "public.profile_role": {
-      "name": "profile_role",
-      "schema": "public",
-      "values": [
-        "sales",
-        "admin"
-      ]
-    },
-    "public.criterion_type": {
-      "name": "criterion_type",
-      "schema": "public",
-      "values": [
-        "benefit",
-        "cost"
-      ]
-    },
-    "public.input_type": {
-      "name": "input_type",
-      "schema": "public",
-      "values": [
-        "number",
-        "scale",
-        "tech_features"
-      ]
-    }
-  },
-  "schemas": {
-    "auth": "auth"
-  },
-  "sequences": {},
-  "roles": {},
-  "policies": {},
-  "views": {},
-  "_meta": {
-    "columns": {},
-    "schemas": {},
-    "tables": {}
-  }
+	"id": "dc4c23cf-4e75-4a08-bccf-327560c646e5",
+	"prevId": "e7d3335c-58f4-48c3-88cc-fc8f7b7742e6",
+	"version": "7",
+	"dialect": "postgresql",
+	"tables": {
+		"auth.users": {
+			"name": "users",
+			"schema": "auth",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.profiles": {
+			"name": "profiles",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"role": {
+					"name": "role",
+					"type": "profile_role",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'sales'"
+				},
+				"is_active": {
+					"name": "is_active",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": true
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"profiles_id_users_id_fk": {
+					"name": "profiles_id_users_id_fk",
+					"tableFrom": "profiles",
+					"tableTo": "users",
+					"schemaTo": "auth",
+					"columnsFrom": ["id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.alternatives": {
+			"name": "alternatives",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"code": {
+					"name": "code",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"category": {
+					"name": "category",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"img": {
+					"name": "img",
+					"type": "jsonb",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"is_active": {
+					"name": "is_active",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": true
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {
+				"alternatives_code_unique": {
+					"name": "alternatives_code_unique",
+					"nullsNotDistinct": false,
+					"columns": ["code"]
+				}
+			},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.criteria": {
+			"name": "criteria",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"code": {
+					"name": "code",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"description": {
+					"name": "description",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"unit": {
+					"name": "unit",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"raw_weight": {
+					"name": "raw_weight",
+					"type": "numeric(10, 4)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"normalized_weight": {
+					"name": "normalized_weight",
+					"type": "numeric(12, 9)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"type": {
+					"name": "type",
+					"type": "criterion_type",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"input_type": {
+					"name": "input_type",
+					"type": "input_type",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'number'"
+				},
+				"order_index": {
+					"name": "order_index",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"is_active": {
+					"name": "is_active",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": true
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {
+				"criteria_code_unique": {
+					"name": "criteria_code_unique",
+					"nullsNotDistinct": false,
+					"columns": ["code"]
+				}
+			},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.criterion_scales": {
+			"name": "criterion_scales",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"criterion_id": {
+					"name": "criterion_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"label": {
+					"name": "label",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"value": {
+					"name": "value",
+					"type": "numeric(10, 4)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"description": {
+					"name": "description",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"order_index": {
+					"name": "order_index",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"criterion_scales_criterion_id_criteria_id_fk": {
+					"name": "criterion_scales_criterion_id_criteria_id_fk",
+					"tableFrom": "criterion_scales",
+					"tableTo": "criteria",
+					"columnsFrom": ["criterion_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.alternative_criterion_values": {
+			"name": "alternative_criterion_values",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"alternative_id": {
+					"name": "alternative_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"criterion_id": {
+					"name": "criterion_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"raw_value": {
+					"name": "raw_value",
+					"type": "numeric(14, 4)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"label_value": {
+					"name": "label_value",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"alternative_criterion_values_alternative_id_alternatives_id_fk": {
+					"name": "alternative_criterion_values_alternative_id_alternatives_id_fk",
+					"tableFrom": "alternative_criterion_values",
+					"tableTo": "alternatives",
+					"columnsFrom": ["alternative_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"alternative_criterion_values_criterion_id_criteria_id_fk": {
+					"name": "alternative_criterion_values_criterion_id_criteria_id_fk",
+					"tableFrom": "alternative_criterion_values",
+					"tableTo": "criteria",
+					"columnsFrom": ["criterion_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {
+				"alternative_criterion_values_alternative_criterion_unique": {
+					"name": "alternative_criterion_values_alternative_criterion_unique",
+					"nullsNotDistinct": false,
+					"columns": ["alternative_id", "criterion_id"]
+				}
+			},
+			"policies": {},
+			"checkConstraints": {
+				"alternative_criterion_values_raw_value_non_negative": {
+					"name": "alternative_criterion_values_raw_value_non_negative",
+					"value": "\"alternative_criterion_values\".\"raw_value\" >= 0"
+				}
+			},
+			"isRLSEnabled": false
+		},
+		"public.calculation_runs": {
+			"name": "calculation_runs",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"run_name": {
+					"name": "run_name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_by": {
+					"name": "created_by",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"criteria_count": {
+					"name": "criteria_count",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"alternative_count": {
+					"name": "alternative_count",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"note": {
+					"name": "note",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"calculation_runs_created_by_profiles_id_fk": {
+					"name": "calculation_runs_created_by_profiles_id_fk",
+					"tableFrom": "calculation_runs",
+					"tableTo": "profiles",
+					"columnsFrom": ["created_by"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {
+				"calculation_runs_criteria_count_positive": {
+					"name": "calculation_runs_criteria_count_positive",
+					"value": "\"calculation_runs\".\"criteria_count\" > 0"
+				},
+				"calculation_runs_alternative_count_positive": {
+					"name": "calculation_runs_alternative_count_positive",
+					"value": "\"calculation_runs\".\"alternative_count\" > 0"
+				}
+			},
+			"isRLSEnabled": false
+		},
+		"public.calculation_details": {
+			"name": "calculation_details",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"calculation_run_id": {
+					"name": "calculation_run_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"alternative_id": {
+					"name": "alternative_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"criterion_id": {
+					"name": "criterion_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"raw_value": {
+					"name": "raw_value",
+					"type": "numeric(14, 4)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"denominator": {
+					"name": "denominator",
+					"type": "numeric(18, 9)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"normalized_value": {
+					"name": "normalized_value",
+					"type": "numeric(18, 9)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"weight": {
+					"name": "weight",
+					"type": "numeric(12, 9)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"weighted_value": {
+					"name": "weighted_value",
+					"type": "numeric(18, 9)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"criterionType": {
+					"name": "criterionType",
+					"type": "criterion_type",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"calculation_details_calculation_run_id_calculation_runs_id_fk": {
+					"name": "calculation_details_calculation_run_id_calculation_runs_id_fk",
+					"tableFrom": "calculation_details",
+					"tableTo": "calculation_runs",
+					"columnsFrom": ["calculation_run_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"calculation_details_alternative_id_alternatives_id_fk": {
+					"name": "calculation_details_alternative_id_alternatives_id_fk",
+					"tableFrom": "calculation_details",
+					"tableTo": "alternatives",
+					"columnsFrom": ["alternative_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"calculation_details_criterion_id_criteria_id_fk": {
+					"name": "calculation_details_criterion_id_criteria_id_fk",
+					"tableFrom": "calculation_details",
+					"tableTo": "criteria",
+					"columnsFrom": ["criterion_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {
+				"calculation_details_run_alternative_criterion_unique": {
+					"name": "calculation_details_run_alternative_criterion_unique",
+					"nullsNotDistinct": false,
+					"columns": ["calculation_run_id", "alternative_id", "criterion_id"]
+				}
+			},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.calculation_results": {
+			"name": "calculation_results",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"calculation_run_id": {
+					"name": "calculation_run_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"alternative_id": {
+					"name": "alternative_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"total_benefit": {
+					"name": "total_benefit",
+					"type": "numeric(18, 9)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"total_cost": {
+					"name": "total_cost",
+					"type": "numeric(18, 9)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"optimization_score": {
+					"name": "optimization_score",
+					"type": "numeric(18, 9)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"rank": {
+					"name": "rank",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"calculation_results_calculation_run_id_calculation_runs_id_fk": {
+					"name": "calculation_results_calculation_run_id_calculation_runs_id_fk",
+					"tableFrom": "calculation_results",
+					"tableTo": "calculation_runs",
+					"columnsFrom": ["calculation_run_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"calculation_results_alternative_id_alternatives_id_fk": {
+					"name": "calculation_results_alternative_id_alternatives_id_fk",
+					"tableFrom": "calculation_results",
+					"tableTo": "alternatives",
+					"columnsFrom": ["alternative_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {
+				"calculation_results_run_alternative_unique": {
+					"name": "calculation_results_run_alternative_unique",
+					"nullsNotDistinct": false,
+					"columns": ["calculation_run_id", "alternative_id"]
+				},
+				"calculation_results_run_rank_unique": {
+					"name": "calculation_results_run_rank_unique",
+					"nullsNotDistinct": false,
+					"columns": ["calculation_run_id", "rank"]
+				}
+			},
+			"policies": {},
+			"checkConstraints": {
+				"calculation_results_rank_positive": {
+					"name": "calculation_results_rank_positive",
+					"value": "\"calculation_results\".\"rank\" > 0"
+				}
+			},
+			"isRLSEnabled": false
+		}
+	},
+	"enums": {
+		"public.profile_role": {
+			"name": "profile_role",
+			"schema": "public",
+			"values": ["sales", "admin"]
+		},
+		"public.criterion_type": {
+			"name": "criterion_type",
+			"schema": "public",
+			"values": ["benefit", "cost"]
+		},
+		"public.input_type": {
+			"name": "input_type",
+			"schema": "public",
+			"values": ["number", "scale", "tech_features"]
+		}
+	},
+	"schemas": {
+		"auth": "auth"
+	},
+	"sequences": {},
+	"roles": {},
+	"policies": {},
+	"views": {},
+	"_meta": {
+		"columns": {},
+		"schemas": {},
+		"tables": {}
+	}
 }

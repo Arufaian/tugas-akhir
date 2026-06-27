@@ -40,7 +40,7 @@ export const columns: ColumnDef<Criterion>[] = [
 				render: () => `<span>${label}</span>`
 			}));
 			return renderComponent(Badge, {
-				variant: type === 'benefit' ? 'success' : 'warning',
+				variant: type === 'benefit' ? 'success' : 'destructive',
 				children
 			});
 		},
@@ -142,7 +142,8 @@ export const columns: ColumnDef<Criterion>[] = [
 		cell: ({ row }) => {
 			return renderComponent(DataTableActions, {
 				id: row.original.id,
-				name: row.original.name
+				name: row.original.name,
+				inputType: row.original.inputType
 			});
 		},
 		enableHiding: false

@@ -2,6 +2,7 @@
 	import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
+	import RulerIcon from '@lucide/svelte/icons/ruler';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import ConfirmDeleteDialog from '$lib/components/confirm-delete-dialog.svelte';
@@ -11,10 +12,12 @@
 
 	let {
 		id,
-		name
+		name,
+		inputType
 	}: {
 		id: string;
 		name: string;
+		inputType: string;
 	} = $props();
 
 	let showDialog = $state(false);
@@ -54,6 +57,12 @@
 				<PencilIcon />
 				Edit
 			</DropdownMenu.Item>
+			{#if inputType === 'scale'}
+				<DropdownMenu.Item onclick={() => goto(resolve(`/admin/criteria/${id}/scales`))}>
+					<RulerIcon />
+					Skala
+				</DropdownMenu.Item>
+			{/if}
 			<DropdownMenu.Separator />
 			<DropdownMenu.Item variant="destructive" onclick={() => (showDialog = true)}>
 				<Trash2Icon />

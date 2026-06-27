@@ -189,7 +189,7 @@ Penjelasan fungsi tabel:
 
 Data awal:
 
-| code | name                     | unit          | raw_weight | normalized_weight | type      | input_type       | order_index |
+| code | name                     | unit          | raw_weight | normalized_weight | type      | input_type      | order_index |
 | ---- | ------------------------ | ------------- | ---------: | ----------------: | --------- | --------------- | ----------: |
 | `C1` | `Kapasitas Mesin`        | `cc`          |          4 |          0.173913 | `benefit` | `number`        |           1 |
 | `C2` | `Teknologi`              | `skor`        |          5 |          0.217391 | `benefit` | `tech_features` |           2 |
@@ -268,16 +268,16 @@ $lib/constants/technology-features.ts
 
 ```ts
 export const TECHNOLOGY_FEATURES = [
-  { name: 'ABS', score: 15, aspect: 'Keselamatan' },
-  { name: 'TCS', score: 15, aspect: 'Keselamatan' },
-  { name: 'VVA', score: 10, aspect: 'Performa' },
-  { name: 'YECVT', score: 25, aspect: 'Performa' },
-  { name: 'Y-Shift/Riding Mode', score: 5, aspect: 'Performa' },
-  { name: 'Hybrid Power Assist', score: 10, aspect: 'Efisiensi Tambahan' },
-  { name: 'SSS', score: 5, aspect: 'Efisiensi Tambahan' },
-  { name: 'Smart Key', score: 5, aspect: 'Ekosistem Digital' },
-  { name: 'Y-Connect', score: 5, aspect: 'Ekosistem Digital' },
-  { name: 'TFT Display', score: 5, aspect: 'Ekosistem Digital' },
+	{ name: 'ABS', score: 15, aspect: 'Keselamatan' },
+	{ name: 'TCS', score: 15, aspect: 'Keselamatan' },
+	{ name: 'VVA', score: 10, aspect: 'Performa' },
+	{ name: 'YECVT', score: 25, aspect: 'Performa' },
+	{ name: 'Y-Shift/Riding Mode', score: 5, aspect: 'Performa' },
+	{ name: 'Hybrid Power Assist', score: 10, aspect: 'Efisiensi Tambahan' },
+	{ name: 'SSS', score: 5, aspect: 'Efisiensi Tambahan' },
+	{ name: 'Smart Key', score: 5, aspect: 'Ekosistem Digital' },
+	{ name: 'Y-Connect', score: 5, aspect: 'Ekosistem Digital' },
+	{ name: 'TFT Display', score: 5, aspect: 'Ekosistem Digital' }
 ] as const; // total: 100
 ```
 
@@ -684,16 +684,16 @@ optimization_score_i = total_benefit_i - total_cost_i
 
 Aktifkan RLS pada semua tabel.
 
-| Tabel                             | Read                        | Insert/Update/Delete                 |
-| --------------------------------- | --------------------------- | ------------------------------------ |
-| `profiles`                        | User own profile, admin all | User own profile terbatas, admin all |
-| `alternatives`                    | authenticated users         | admin only                           |
-| `criteria`                        | authenticated users         | admin only                           |
-| `alternative_criterion_values`    | authenticated users         | admin only                           |
-| `criterion_scales`                | authenticated users         | admin only                           |
-| `calculation_runs`                | admin all, sales own        | sales insert own, admin all          |
-| `calculation_details`             | admin all, sales own run    | via server/RPC only                  |
-| `calculation_results`             | admin all, sales own run    | via server/RPC only                  |
+| Tabel                          | Read                        | Insert/Update/Delete                 |
+| ------------------------------ | --------------------------- | ------------------------------------ |
+| `profiles`                     | User own profile, admin all | User own profile terbatas, admin all |
+| `alternatives`                 | authenticated users         | admin only                           |
+| `criteria`                     | authenticated users         | admin only                           |
+| `alternative_criterion_values` | authenticated users         | admin only                           |
+| `criterion_scales`             | authenticated users         | admin only                           |
+| `calculation_runs`             | admin all, sales own        | sales insert own, admin all          |
+| `calculation_details`          | admin all, sales own run    | via server/RPC only                  |
+| `calculation_results`          | admin all, sales own run    | via server/RPC only                  |
 
 ---
 
