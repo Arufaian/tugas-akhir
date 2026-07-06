@@ -14,7 +14,10 @@
 	import { superForm } from 'sveltekit-superforms';
 	import { zod4Client } from 'sveltekit-superforms/adapters';
 	import { toast } from 'svelte-sonner';
-	import { createCriterionScaleSchema } from '$lib/validations/criterion-scale.schema.js';
+	import {
+		createCriterionScaleSchema,
+		deleteCriterionScaleSchema
+	} from '$lib/validations/criterion-scale.schema.js';
 
 	let { data } = $props();
 
@@ -25,7 +28,9 @@
 	type Scale = (typeof scales)[number];
 
 	let dialogOpen = $state(false);
+	let deleteDialogOpen = $state(false);
 	let editingScale = $state<Scale | null>(null);
+	let deletingScale = $state<Scale | null>(null);
 
 	const initialForm = () => data.form;
 	const f = superForm(initialForm(), {
@@ -41,6 +46,20 @@
 	});
 
 	const { form: formData, enhance, submitting, reset } = f;
+
+	const initialDeleteForm = () => data.deleteForm;
+	const deleteF = superForm(initialDeleteForm(), {
+		validators: zod4Client(deleteCriterionScaleSchema),
+		onUpdated({ form: f }) {
+			if (f.message?.type === 'success') {
+				toast.success(f.message.text);
+				closeDeleteDialog();
+			} else if (f.message?.type === 'error') {
+				toast.error(f.message.text);
+			}
+		}
+	});
+	const { form: deleteFormData, enhance: deleteEnhance, submitting: deleting } = deleteF;
 
 	function openCreateDialog() {
 		editingScale = null;
@@ -59,6 +78,17 @@
 	function closeDialog() {
 		dialogOpen = false;
 		editingScale = null;
+	}
+
+	function openDeleteDialog(scale: Scale) {
+		deletingScale = scale;
+		$deleteFormData.scaleId = scale.id;
+		deleteDialogOpen = true;
+	}
+
+	function closeDeleteDialog() {
+		deleteDialogOpen = false;
+		deletingScale = null;
 	}
 </script>
 
@@ -192,6 +222,35 @@
 		</Dialog.Content>
 	</Dialog.Root>
 
+	<Dialog.Root bind:open={deleteDialogOpen}>
+		<Dialog.Content>
+			{#if deletingScale}
+				<form method="POST" action="?/delete" use:deleteEnhance>
+					<Dialog.Header>
+						<Dialog.Title>Hapus Skala</Dialog.Title>
+						<Dialog.Description class="pb-8">
+							Yakin ingin menghapus "{deletingScale?.label ?? 'skala ini'}"?
+						</Dialog.Description>
+					</Dialog.Header>
+
+					<Dialog.Footer>
+						<Button variant="outline" onclick={closeDeleteDialog} type="button">Batal</Button>
+						<input type="hidden" name="scaleId" bind:value={$deleteFormData.scaleId} />
+
+						<Form.Button type="submit" disabled={$deleting}>
+							{#if $deleting}
+								<Spinner />
+								Menghapus...
+							{:else}
+								Hapus
+							{/if}
+						</Form.Button>
+					</Dialog.Footer>
+				</form>
+			{/if}
+		</Dialog.Content>
+	</Dialog.Root>
+
 	{#if scales.length === 0}
 		<div
 			class="flex flex-col items-center justify-center gap-3 rounded-xl border bg-card py-16 text-center"
@@ -230,7 +289,7 @@
 									<span class="hidden text-sm sm:inline">Edit</span>
 								</Button>
 
-								<Button variant="destructive">
+								<Button variant="destructive" type="button" onclick={() => openDeleteDialog(scale)}>
 									<Trash2 />
 									<span class="hidden text-sm sm:inline">Hapus</span>
 								</Button>

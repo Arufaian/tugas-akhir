@@ -5,7 +5,11 @@ import { zod4 } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db/index.js';
 import { criteriaTable, criterionScalesTable } from '$lib/server/db/schema/index.js';
 import { eq, asc, sql, and } from 'drizzle-orm';
-import { createCriterionScaleSchema } from '$lib/validations/criterion-scale.schema.js';
+import {
+	createCriterionScaleSchema,
+	deleteCriterionScaleSchema,
+	updateCriterionScaleSchema
+} from '$lib/validations/criterion-scale.schema.js';
 
 const uuidSchema = z.uuid();
 
@@ -31,7 +35,8 @@ export async function load({ params }) {
 	return {
 		scales: scales.map((s) => ({ ...s, value: Number(s.value) })),
 		criterion: criterion,
-		form: await superValidate(zod4(createCriterionScaleSchema))
+		form: await superValidate(zod4(createCriterionScaleSchema)),
+		deleteForm: await superValidate(zod4(deleteCriterionScaleSchema))
 	};
 }
 
@@ -83,17 +88,15 @@ export const actions = {
 		return message(form, { type: 'success', text: 'Skala berhasil ditambahkan' });
 	},
 	update: async (event) => {
-		const formData = await event.request.formData();
-		const form = await superValidate(formData, zod4(createCriterionScaleSchema));
+		const form = await superValidate(event, zod4(updateCriterionScaleSchema));
 
 		if (!form.valid) {
 			return fail(400, { form });
 		}
 
 		const criterionId = uuidSchema.safeParse(event.params.id);
-		const scaleId = uuidSchema.safeParse(formData.get('scaleId'));
 
-		if (!criterionId.success || !scaleId.success) {
+		if (!criterionId.success) {
 			return message(form, { type: 'error', text: 'Skala tidak ditemukan' }, { status: 404 });
 		}
 
@@ -108,7 +111,7 @@ export const actions = {
 				})
 				.where(
 					and(
-						eq(criterionScalesTable.id, scaleId.data),
+						eq(criterionScalesTable.id, form.data.scaleId),
 						eq(criterionScalesTable.criterionId, criterionId.data)
 					)
 				)
@@ -134,5 +137,38 @@ export const actions = {
 		}
 
 		return message(form, { type: 'success', text: 'Skala berhasil diperbarui' });
+	},
+	delete: async (event) => {
+		const form = await superValidate(event, zod4(deleteCriterionScaleSchema));
+
+		if (!form.valid) {
+			return fail(400, { form });
+		}
+
+		const criterionId = uuidSchema.safeParse(event.params.id);
+
+		if (!criterionId.success) {
+			return message(form, { type: 'error', text: 'Skala tidak ditemukan' }, { status: 404 });
+		}
+
+		try {
+			const [deletedScale] = await db
+				.delete(criterionScalesTable)
+				.where(
+					and(
+						eq(criterionScalesTable.id, form.data.scaleId),
+						eq(criterionScalesTable.criterionId, criterionId.data)
+					)
+				)
+				.returning({ id: criterionScalesTable.id });
+
+			if (!deletedScale) {
+				return message(form, { type: 'error', text: 'Skala tidak ditemukan' }, { status: 404 });
+			}
+		} catch {
+			return message(form, { type: 'error', text: 'Gagal menghapus skala' }, { status: 500 });
+		}
+
+		return message(form, { type: 'success', text: 'Skala berhasil dihapus' });
 	}
 };
