@@ -90,6 +90,9 @@
 						Hitung Ulang Bobot
 					{/if}
 				</Button>
+				<span class="text-xs text-muted-foreground/70">
+					Total bobot normal: {(data.normalizedSum * 100).toFixed(2)}%
+				</span>
 				{#if data.needsNormalization}
 					<div class="flex items-center gap-1.5">
 						<span class="inline-flex h-2 w-2 animate-pulse rounded-full bg-warning"></span>

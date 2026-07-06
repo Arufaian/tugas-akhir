@@ -12,14 +12,14 @@ Saat ini `needsNormalization` menghitung total `normalizedWeight` dari semua kri
 
 Ubah logika di `src/routes/admin/criteria/+page.server.ts`:
 
-- Hitung `normalizedSum` hanya dari criteria aktif.
-- `hasZeroWeight` tetap hanya untuk criteria aktif.
-- Return `normalizedSum` agar UI bisa menampilkan total bobot normal.
+- [x] Hitung `normalizedSum` hanya dari criteria aktif.
+- [x] `hasZeroWeight` tetap hanya untuk criteria aktif.
+- [x] Return `normalizedSum` agar UI bisa menampilkan total bobot normal.
 
 Kriteria selesai:
 
-- Jika active criteria sudah berjumlah `1.0`, indikator "Bobot perlu disesuaikan" tidak muncul.
-- Inactive criteria tidak membuat status normalisasi stale.
+- [x] Jika active criteria sudah berjumlah `1.0`, indikator "Bobot perlu disesuaikan" tidak muncul.
+- [x] Inactive criteria tidak membuat status normalisasi stale.
 
 ### 2.2 Update `updatedAt` Saat Normalize
 

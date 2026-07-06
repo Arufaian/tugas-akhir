@@ -12,6 +12,7 @@ export async function load() {
 		.groupBy(criterionScalesTable.criterionId);
 	const scaleCountMap = new Map(scaleCounts.map((r) => [r.criterionId, r.count]));
 	const criteria = rows.map((r) => ({ ...r, scaleCount: scaleCountMap.get(r.id) ?? 0 }));
+	const activeRows = rows.filter((r) => r.isActive);
 
 	const total = rows.length;
 	const benefitCount = rows.filter((c) => c.type === 'benefit').length;
@@ -21,9 +22,9 @@ export async function load() {
 		(c) => c.inputType === 'scale' && c.scaleCount === 0
 	).length;
 
-	// ponytail: sum check — sum should be ~1.0, pulse button if stale
-	const normalizedSum = rows.reduce((s, r) => s + Number(r.normalizedWeight), 0);
-	const hasZeroWeight = rows.some((r) => r.isActive && Number(r.normalizedWeight) === 0);
+	// ponytail: MOORA only uses active criteria; inactive rows must not stale the indicator.
+	const normalizedSum = activeRows.reduce((s, r) => s + Number(r.normalizedWeight), 0);
+	const hasZeroWeight = activeRows.some((r) => Number(r.normalizedWeight) === 0);
 	const needsNormalization = Math.abs(normalizedSum - 1) > 0.0001 || hasZeroWeight;
 
 	return {
@@ -31,6 +32,7 @@ export async function load() {
 		total,
 		benefitCount,
 		costCount,
+		normalizedSum,
 		needsNormalization,
 		scaleCriteriaCount,
 		emptyScaleCriteriaCount
