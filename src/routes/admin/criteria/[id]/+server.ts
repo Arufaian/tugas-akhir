@@ -7,7 +7,7 @@ import { z } from 'zod';
 export async function DELETE({ params }) {
 	try {
 		const { id } = params;
-		const idResult = z.string().uuid().safeParse(id);
+		const idResult = z.uuid().safeParse(id);
 		if (!idResult.success) return json({ message: 'ID tidak valid' }, { status: 400 });
 
 		const [criterion] = await db
