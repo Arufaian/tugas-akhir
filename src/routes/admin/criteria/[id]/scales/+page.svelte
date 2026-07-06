@@ -10,7 +10,7 @@
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import { Progress } from '$lib/components/ui/progress/index.js';
 	import Spinner from '$lib/components/ui/spinner/spinner.svelte';
-	import { Ruler, ArrowLeft, Plus } from '@lucide/svelte';
+	import { Ruler, ArrowLeft, Plus, Pencil, Trash2 } from '@lucide/svelte';
 	import { superForm } from 'sveltekit-superforms';
 	import { zod4Client } from 'sveltekit-superforms/adapters';
 	import { toast } from 'svelte-sonner';
@@ -22,7 +22,10 @@
 	let criterion = $derived(data.criterion);
 	let maxValue = $derived(scales.length > 0 ? Math.max(...scales.map((s) => Number(s.value))) : 1);
 
+	type Scale = (typeof scales)[number];
+
 	let dialogOpen = $state(false);
+	let editingScale = $state<Scale | null>(null);
 
 	const initialForm = () => data.form;
 	const f = superForm(initialForm(), {
@@ -30,7 +33,7 @@
 		onUpdated({ form: f }) {
 			if (f.message?.type === 'success') {
 				toast.success(f.message.text);
-				dialogOpen = false;
+				closeDialog();
 			} else if (f.message?.type === 'error') {
 				toast.error(f.message.text);
 			}
@@ -39,11 +42,24 @@
 
 	const { form: formData, enhance, submitting, reset } = f;
 
-	$effect(() => {
-		if (dialogOpen) {
-			reset();
-		}
-	});
+	function openCreateDialog() {
+		editingScale = null;
+		reset();
+		dialogOpen = true;
+	}
+
+	function openEditDialog(scale: Scale) {
+		editingScale = scale;
+		$formData.label = scale.label;
+		$formData.value = Number(scale.value);
+		$formData.description = scale.description ?? '';
+		dialogOpen = true;
+	}
+
+	function closeDialog() {
+		dialogOpen = false;
+		editingScale = null;
+	}
 </script>
 
 <svelte:head>
@@ -78,7 +94,7 @@
 					<Badge variant="secondary" class="shrink-0">
 						{scales.length} skala
 					</Badge>
-					<Button size="sm" class="gap-1.5" onclick={() => (dialogOpen = true)} type="button">
+					<Button size="sm" class="gap-1.5" onclick={openCreateDialog} type="button">
 						<Plus class="size-4" />
 						<span class="hidden sm:inline">Tambah</span>
 					</Button>
@@ -89,9 +105,18 @@
 
 	<Dialog.Root bind:open={dialogOpen}>
 		<Dialog.Content>
-			<form method="POST" action="?/create" use:enhance class="contents">
+			<form
+				method="POST"
+				action={editingScale ? '?/update' : '?/create'}
+				use:enhance
+				class="contents"
+			>
+				{#if editingScale}
+					<input type="hidden" name="scaleId" value={editingScale.id} />
+				{/if}
+
 				<Dialog.Header>
-					<Dialog.Title>Tambah Skala</Dialog.Title>
+					<Dialog.Title>{editingScale ? 'Edit Skala' : 'Tambah Skala'}</Dialog.Title>
 					<Dialog.Description>
 						Untuk: {criterion?.name ?? '...'}
 					</Dialog.Description>
@@ -153,9 +178,7 @@
 				</div>
 
 				<Dialog.Footer>
-					<Button variant="outline" onclick={() => (dialogOpen = false)} type="button">
-						Batal
-					</Button>
+					<Button variant="outline" onclick={closeDialog} type="button">Batal</Button>
 					<Form.Button disabled={$submitting}>
 						{#if $submitting}
 							<Spinner />
@@ -196,9 +219,23 @@
 						</div>
 						<Progress value={Number(scale.value)} max={maxValue} />
 
-						{#if scale.description}
-							<span class="truncate text-xs text-muted-foreground">{scale.description}</span>
-						{/if}
+						<div class="flex w-full items-center justify-between gap-2 pt-2">
+							{#if scale.description}
+								<span class="truncate text-xs text-muted-foreground">{scale.description}</span>
+							{/if}
+
+							<div class="align-center flex justify-center gap-2">
+								<Button variant="warning" onclick={() => openEditDialog(scale)}>
+									<Pencil />
+									<span class="hidden text-sm sm:inline">Edit</span>
+								</Button>
+
+								<Button variant="destructive">
+									<Trash2 />
+									<span class="hidden text-sm sm:inline">Hapus</span>
+								</Button>
+							</div>
+						</div>
 					</div>
 
 					<Badge variant="default" class="shrink-0 tabular-nums">
