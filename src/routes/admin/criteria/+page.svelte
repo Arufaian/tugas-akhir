@@ -3,7 +3,7 @@
 	import { columns } from './columns.js';
 	import { Card, CardContent } from '$lib/components/ui/card/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { Ruler, ArrowUp, ArrowDown, Plus, RotateCcw } from '@lucide/svelte';
+	import { Ruler, ArrowUp, ArrowDown, Plus, RotateCcw, ListChecks } from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
@@ -34,7 +34,7 @@
 	<title>Kriteria</title>
 </svelte:head>
 
-<div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+<div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
 	<Card size="sm">
 		<CardContent class="flex flex-col gap-3">
 			<div class="flex items-center gap-2">
@@ -131,6 +131,36 @@
 				{data.costCount}
 			</span>
 			<span class="text-xs text-muted-foreground/70">kriteria</span>
+		</CardContent>
+	</Card>
+
+	<Card size="sm">
+		<CardContent class="flex flex-col gap-3">
+			<div class="flex items-center gap-2">
+				<div
+					class={[
+						'flex size-8 items-center justify-center rounded-md',
+						data.emptyScaleCriteriaCount > 0
+							? 'bg-warning/10 text-warning'
+							: 'bg-success/10 text-success'
+					]}
+				>
+					<ListChecks class="size-4" />
+				</div>
+				<span class="text-sm font-medium text-muted-foreground">Kriteria Skala</span>
+			</div>
+			<span
+				class="font-display text-3xl leading-none font-semibold tracking-tighter text-foreground"
+			>
+				{data.scaleCriteriaCount}
+			</span>
+			<span class="text-xs text-muted-foreground/70">
+				{#if data.emptyScaleCriteriaCount > 0}
+					{data.emptyScaleCriteriaCount} belum punya skala
+				{:else}
+					data master siap
+				{/if}
+			</span>
 		</CardContent>
 	</Card>
 </div>

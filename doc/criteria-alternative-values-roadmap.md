@@ -35,15 +35,15 @@ Kriteria dengan `inputType = 'scale'` membutuhkan minimal satu row di `criterion
 
 Tambahkan data dari `criterion_scales` ke load `/admin/criteria`:
 
-- `scaleCount` per criterion.
-- `scaleCriteriaCount`.
-- `emptyScaleCriteriaCount`.
+- [x] `scaleCount` per criterion.
+- [x] `scaleCriteriaCount`.
+- [x] `emptyScaleCriteriaCount`.
 
 Kriteria selesai:
 
-- Row criteria bertipe `scale` menampilkan jumlah skala.
-- `0 skala` terlihat sebagai warning.
-- Criteria non-scale tidak dipaksa punya skala.
+- [x] Row criteria bertipe `scale` menampilkan jumlah skala.
+- [x] `0 skala` terlihat sebagai warning.
+- [x] Criteria non-scale tidak dipaksa punya skala.
 
 ### 2.4 Tambahkan Summary Kesiapan Skala
 
@@ -51,6 +51,11 @@ Tambahkan ringkasan kecil di halaman criteria:
 
 - Total kriteria skala.
 - Jumlah kriteria skala tanpa scale.
+
+Catatan implementasi:
+
+- [x] UI summary ditambahkan.
+- [x] Summary tersambung ke count asli dari `criterion_scales`.
 
 Kriteria selesai:
 
@@ -61,18 +66,18 @@ Kriteria selesai:
 Di `src/routes/admin/criteria/[id]/+server.ts`, ganti:
 
 ```ts
-z.string().uuid()
+z.string().uuid();
 ```
 
 menjadi:
 
 ```ts
-z.uuid()
+z.uuid();
 ```
 
 Kriteria selesai:
 
-- Validasi UUID route criteria memakai API Zod 4 yang konsisten dengan file lain.
+- [x] Validasi UUID route criteria memakai API Zod 4 yang konsisten dengan file lain.
 
 ## 3. Tunda Sampai Alternative Values
 
@@ -82,11 +87,11 @@ Saat fitur alternative values dibuat, form input nilai harus mengikuti `criteria
 
 Mapping minimal:
 
-| inputType       | UI                           | Nilai yang disimpan                                          |
-| --------------- | ---------------------------- | ------------------------------------------------------------ |
-| `number`        | Input number                 | `rawValue` dari input                                        |
+| inputType       | UI                             | Nilai yang disimpan                                                        |
+| --------------- | ------------------------------ | -------------------------------------------------------------------------- |
+| `number`        | Input number                   | `rawValue` dari input                                                      |
 | `scale`         | Select dari `criterion_scales` | `rawValue = criterion_scales.value`, `labelValue = criterion_scales.label` |
-| `tech_features` | Ditentukan nanti             | `rawValue` hasil mapping fitur                               |
+| `tech_features` | Ditentukan nanti               | `rawValue` hasil mapping fitur                                             |
 
 Kriteria selesai:
 

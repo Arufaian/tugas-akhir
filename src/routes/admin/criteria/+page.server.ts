@@ -1,22 +1,40 @@
 import { db } from '$lib/server/db';
-import { criteriaTable } from '$lib/server/db/schema';
-import { asc, eq } from 'drizzle-orm';
+import { criteriaTable, criterionScalesTable } from '$lib/server/db/schema';
+import { asc, count, eq } from 'drizzle-orm';
 import { fail } from '@sveltejs/kit';
 import { recalcNormalizedWeights } from '$lib/utils/normalize.js';
 
 export async function load() {
 	const rows = await db.select().from(criteriaTable).orderBy(asc(criteriaTable.orderIndex));
+	const scaleCounts = await db
+		.select({ criterionId: criterionScalesTable.criterionId, count: count() })
+		.from(criterionScalesTable)
+		.groupBy(criterionScalesTable.criterionId);
+	const scaleCountMap = new Map(scaleCounts.map((r) => [r.criterionId, r.count]));
+	const criteria = rows.map((r) => ({ ...r, scaleCount: scaleCountMap.get(r.id) ?? 0 }));
 
 	const total = rows.length;
 	const benefitCount = rows.filter((c) => c.type === 'benefit').length;
 	const costCount = rows.filter((c) => c.type === 'cost').length;
+	const scaleCriteriaCount = criteria.filter((c) => c.inputType === 'scale').length;
+	const emptyScaleCriteriaCount = criteria.filter(
+		(c) => c.inputType === 'scale' && c.scaleCount === 0
+	).length;
 
 	// ponytail: sum check — sum should be ~1.0, pulse button if stale
 	const normalizedSum = rows.reduce((s, r) => s + Number(r.normalizedWeight), 0);
 	const hasZeroWeight = rows.some((r) => r.isActive && Number(r.normalizedWeight) === 0);
 	const needsNormalization = Math.abs(normalizedSum - 1) > 0.0001 || hasZeroWeight;
 
-	return { criteria: rows, total, benefitCount, costCount, needsNormalization };
+	return {
+		criteria,
+		total,
+		benefitCount,
+		costCount,
+		needsNormalization,
+		scaleCriteriaCount,
+		emptyScaleCriteriaCount
+	};
 }
 
 export const actions = {

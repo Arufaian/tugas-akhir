@@ -9,7 +9,9 @@ import { Badge, type BadgeVariant } from '$lib/components/ui/badge/index.js';
 import type { Criterion } from '$lib/validations/criterion.schema.js';
 import DataTableActions from './data-table-actions.svelte';
 
-export const columns: ColumnDef<Criterion>[] = [
+type CriterionRow = Criterion & { scaleCount: number };
+
+export const columns: ColumnDef<CriterionRow>[] = [
 	{
 		accessorKey: 'code',
 		header: ({ column }) =>
@@ -58,6 +60,7 @@ export const columns: ColumnDef<Criterion>[] = [
 			}),
 		cell: ({ row }) => {
 			const type = row.original.inputType;
+			const scaleCount = row.original.scaleCount;
 			const labels: Record<string, string> = {
 				number: 'Angka',
 				scale: 'Skala',
@@ -69,9 +72,13 @@ export const columns: ColumnDef<Criterion>[] = [
 				tech_features: 'info'
 			};
 			const children = createRawSnippet(() => ({
-				render: () => `<span>${labels[type] ?? type}</span>`
+				render: () =>
+					`<span>${type === 'scale' ? `Skala · ${scaleCount} skala` : (labels[type] ?? type)}</span>`
 			}));
-			return renderComponent(Badge, { variant: variants[type] ?? 'secondary', children });
+			return renderComponent(Badge, {
+				variant: type === 'scale' && scaleCount > 0 ? 'success' : (variants[type] ?? 'secondary'),
+				children
+			});
 		},
 		filterFn: (row, _columnId, filterValue: string[]) => {
 			if (!filterValue?.length) return true;
@@ -143,7 +150,8 @@ export const columns: ColumnDef<Criterion>[] = [
 			return renderComponent(DataTableActions, {
 				id: row.original.id,
 				name: row.original.name,
-				inputType: row.original.inputType
+				inputType: row.original.inputType,
+				showScaleWarning: row.original.inputType === 'scale' && row.original.scaleCount === 0
 			});
 		},
 		enableHiding: false

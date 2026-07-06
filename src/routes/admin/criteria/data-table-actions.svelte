@@ -13,11 +13,13 @@
 	let {
 		id,
 		name,
-		inputType
+		inputType,
+		showScaleWarning = false
 	}: {
 		id: string;
 		name: string;
 		inputType: string;
+		showScaleWarning?: boolean;
 	} = $props();
 
 	let showDialog = $state(false);
@@ -49,6 +51,13 @@
 				<Button {...props} variant="ghost" size="icon" class="relative size-8 p-0">
 					<span class="sr-only">Open menu</span>
 					<EllipsisIcon />
+					{#if showScaleWarning}
+						<span
+							class="absolute top-0 right-0 size-2 rounded-full bg-destructive ring-2 ring-card"
+							aria-hidden="true"
+						></span>
+						<span class="sr-only">Kriteria skala belum punya skala</span>
+					{/if}
 				</Button>
 			{/snippet}
 		</DropdownMenu.Trigger>
@@ -61,6 +70,14 @@
 				<DropdownMenu.Item onclick={() => goto(resolve(`/admin/criteria/${id}/scales`))}>
 					<RulerIcon />
 					Skala
+
+					{#if showScaleWarning}
+						<span
+							class="absolute top-0 right-0 size-2 rounded-full bg-destructive ring-2 ring-card"
+							aria-hidden="true"
+						></span>
+						<span class="sr-only">Kriteria skala belum punya skala</span>
+					{/if}
 				</DropdownMenu.Item>
 			{/if}
 			<DropdownMenu.Separator />
