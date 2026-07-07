@@ -5,7 +5,7 @@
 	import MapIcon from '@lucide/svelte/icons/map';
 	import Settings2Icon from '@lucide/svelte/icons/settings-2';
 	import FrameIcon from '@lucide/svelte/icons/frame';
-	import { LayoutDashboard, Motorbike } from '@lucide/svelte';
+	import { LayoutDashboard, Motorbike, Ruler } from '@lucide/svelte';
 	import SquareTerminalIcon from '@lucide/svelte/icons/square-terminal';
 
 	// This is sample data.
@@ -20,6 +20,11 @@
 				title: 'Alternatives',
 				url: '/admin/alternatives',
 				icon: Motorbike
+			},
+			{
+				title: 'Criteria',
+				url: '/admin/criteria',
+				icon: Ruler
 			},
 			{
 				title: 'Playground',

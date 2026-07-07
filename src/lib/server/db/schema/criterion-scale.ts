@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, numeric, integer, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, numeric, integer, timestamp, unique } from 'drizzle-orm/pg-core';
 import { criteriaTable } from './criterion';
 
 export const criterionScalesTable = pgTable('criterion_scales', {
@@ -12,4 +12,6 @@ export const criterionScalesTable = pgTable('criterion_scales', {
 	orderIndex: integer('order_index').notNull(),
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
-});
+}, (table) => [
+	unique('uq_criterion_scale_value').on(table.criterionId, table.value)
+]);

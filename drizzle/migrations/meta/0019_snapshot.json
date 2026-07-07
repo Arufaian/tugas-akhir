@@ -1,6 +1,6 @@
 {
-	"id": "e7d3335c-58f4-48c3-88cc-fc8f7b7742e6",
-	"prevId": "52cd3e2c-387e-44a1-9a46-fbd94a32e940",
+	"id": "dc4c23cf-4e75-4a08-bccf-327560c646e5",
+	"prevId": "e7d3335c-58f4-48c3-88cc-fc8f7b7742e6",
 	"version": "7",
 	"dialect": "postgresql",
 	"tables": {
@@ -192,7 +192,7 @@
 					"name": "unit",
 					"type": "text",
 					"primaryKey": false,
-					"notNull": false
+					"notNull": true
 				},
 				"raw_weight": {
 					"name": "raw_weight",

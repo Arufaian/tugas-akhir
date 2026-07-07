@@ -1,0 +1,1 @@
+ALTER TABLE "criterion_scales" ADD CONSTRAINT "uq_criterion_scale_value" UNIQUE("criterion_id","value");
