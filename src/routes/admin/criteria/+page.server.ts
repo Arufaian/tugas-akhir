@@ -59,7 +59,7 @@ export const actions = {
 		for (const r of result) {
 			await db
 				.update(criteriaTable)
-				.set({ normalizedWeight: r.normalizedWeight.toFixed(9) })
+				.set({ normalizedWeight: r.normalizedWeight.toFixed(9), updatedAt: new Date() })
 				.where(eq(criteriaTable.id, r.id));
 		}
 

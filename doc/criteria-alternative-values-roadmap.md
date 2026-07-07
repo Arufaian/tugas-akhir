@@ -27,7 +27,7 @@ Action `normalize` perlu mengubah `updatedAt` bersama `normalizedWeight`.
 
 Kriteria selesai:
 
-- Setiap criteria yang dinormalisasi mendapat `updatedAt: new Date()`.
+- [x] Setiap criteria yang dinormalisasi mendapat `updatedAt: new Date()`.
 
 ### 2.3 Tampilkan Kesiapan Skala di Criteria List
 
