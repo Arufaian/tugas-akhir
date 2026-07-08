@@ -4,6 +4,7 @@
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
+	import type { Component } from 'svelte';
 
 	let {
 		items
@@ -11,9 +12,7 @@
 		items: {
 			title: string;
 			url: string;
-			// this should be `Component` after @lucide/svelte updates types
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			icon?: any;
+			icon?: Component;
 			isActive?: boolean;
 			items?: {
 				title: string;
@@ -21,6 +20,14 @@
 			}[];
 		}[];
 	} = $props();
+
+	// ponytail: section match is enough until sidebar needs per-route metadata.
+	const isActive = (url: string) => {
+		if (!url.startsWith('/')) return false;
+
+		const path = (resolve as (path: string) => string)(url);
+		return page.url.pathname === path || page.url.pathname.startsWith(`${path}/`);
+	};
 </script>
 
 <Sidebar.Group>
@@ -28,15 +35,16 @@
 	<Sidebar.Menu>
 		{#each items as item (item.title)}
 			{#if item.items}
-				<Collapsible.Root
-					open={item.items?.some((s) => page.url.pathname === s.url)}
-					class="group/collapsible"
-				>
+				<Collapsible.Root open={item.items?.some((s) => isActive(s.url))} class="group/collapsible">
 					{#snippet child({ props })}
 						<Sidebar.MenuItem {...props}>
 							<Collapsible.Trigger>
 								{#snippet child({ props })}
-									<Sidebar.MenuButton {...props} tooltipContent={item.title}>
+									<Sidebar.MenuButton
+										{...props}
+										isActive={item.items?.some((s) => isActive(s.url))}
+										tooltipContent={item.title}
+									>
 										{#if item.icon}
 											<item.icon />
 										{/if}
@@ -51,7 +59,7 @@
 								<Sidebar.MenuSub>
 									{#each item.items as subItem (subItem.title)}
 										<Sidebar.MenuSubItem>
-											<Sidebar.MenuSubButton isActive={page.url.pathname === subItem.url}>
+											<Sidebar.MenuSubButton isActive={isActive(subItem.url)}>
 												{#snippet child({ props })}
 													<!-- ponytail: dynamic sidebar URLs can't match SvelteKit route union -->
 													<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
@@ -69,7 +77,7 @@
 				</Collapsible.Root>
 			{:else}
 				<Sidebar.MenuItem>
-					<Sidebar.MenuButton isActive={page.url.pathname === item.url} tooltipContent={item.title}>
+					<Sidebar.MenuButton isActive={isActive(item.url)} tooltipContent={item.title}>
 						{#snippet child({ props })}
 							<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 							<a href={(resolve as (path: string) => string)(item.url)} {...props}>
