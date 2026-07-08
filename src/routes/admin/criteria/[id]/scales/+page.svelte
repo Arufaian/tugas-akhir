@@ -4,7 +4,8 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import { Progress } from '$lib/components/ui/progress/index.js';
-	import { Ruler, ArrowLeft, Plus, Pencil, Trash2 } from '@lucide/svelte';
+	import BackLinkButton from '$lib/components/back-link-button.svelte';
+	import { Ruler, Plus, Pencil, Trash2 } from '@lucide/svelte';
 	import { superForm } from 'sveltekit-superforms';
 	import { zod4Client } from 'sveltekit-superforms/adapters';
 	import { toast } from 'svelte-sonner';
@@ -94,10 +95,7 @@
 </svelte:head>
 
 <div class="flex flex-col gap-6">
-	<Button variant="link" href="/admin/criteria" class="w-fit px-0 text-muted-foreground">
-		<ArrowLeft class="size-4" />
-		Kembali ke Kriteria
-	</Button>
+	<BackLinkButton href="/admin/criteria" label="Kembali ke Kriteria" />
 
 	<Card.Root>
 		<Card.Header>

@@ -1,10 +1,41 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import AppSidebar from '$lib/components/app-sidebar.svelte';
 	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import LightSwitch from '$lib/components/ui/light-switch/light-switch.svelte';
 	let { data, children } = $props();
+
+	const breadcrumbLabels: Record<string, string> = {
+		admin: 'Admin',
+		dashboard: 'Dashboard',
+		alternatives: 'Alternatif',
+		criteria: 'Kriteria',
+		create: 'Tambah',
+		update: 'Edit',
+		scales: 'Nilai kriteria skala'
+	};
+
+	const breadcrumbs = $derived.by(() => {
+		let href = '';
+
+		return (
+			page.url.pathname
+				.split('/')
+				.filter(Boolean)
+				// ponytail: hide dynamic ids; fetch entity names later if breadcrumbs need record-level context.
+				.filter((segment) => breadcrumbLabels[segment])
+				.map((segment) => {
+					href += `/${segment}`;
+
+					return {
+						href,
+						label: breadcrumbLabels[segment]
+					};
+				})
+		);
+	});
 </script>
 
 <svelte:head>
@@ -23,13 +54,19 @@
 					<Separator orientation="vertical" class="me-2 data-[orientation=vertical]:h-4" />
 					<Breadcrumb.Root>
 						<Breadcrumb.List>
-							<Breadcrumb.Item class="hidden md:block">
-								<Breadcrumb.Link href="##">Build Your Application</Breadcrumb.Link>
-							</Breadcrumb.Item>
-							<Breadcrumb.Separator class="hidden md:block" />
-							<Breadcrumb.Item>
-								<Breadcrumb.Page>Data Fetching</Breadcrumb.Page>
-							</Breadcrumb.Item>
+							{#each breadcrumbs as breadcrumb, index (breadcrumb.href)}
+								{#if index > 0}
+									<Breadcrumb.Separator class="hidden md:block" />
+								{/if}
+
+								<Breadcrumb.Item class={index === 0 ? 'hidden md:block' : undefined}>
+									{#if index === breadcrumbs.length - 1}
+										<Breadcrumb.Page>{breadcrumb.label}</Breadcrumb.Page>
+									{:else}
+										<Breadcrumb.Link href={breadcrumb.href}>{breadcrumb.label}</Breadcrumb.Link>
+									{/if}
+								</Breadcrumb.Item>
+							{/each}
 						</Breadcrumb.List>
 					</Breadcrumb.Root>
 				</div>

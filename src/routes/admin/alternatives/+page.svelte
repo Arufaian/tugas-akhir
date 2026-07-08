@@ -79,7 +79,7 @@
 	<Card size="sm">
 		<CardContent class="flex flex-col gap-3">
 			<div class="flex items-center gap-2">
-				<div class="flex size-8 items-center justify-center rounded-md bg-accent/10 text-accent">
+				<div class="flex size-8 items-center justify-center rounded-md bg-info/10 text-info">
 					<Tags class="size-4" />
 				</div>
 				<span class="text-sm font-medium text-muted-foreground">Kategori</span>

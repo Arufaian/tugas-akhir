@@ -143,14 +143,12 @@
 				<div
 					class={[
 						'flex size-8 items-center justify-center rounded-md',
-						data.emptyScaleCriteriaCount > 0
-							? 'bg-warning/10 text-warning'
-							: 'bg-success/10 text-success'
+						data.emptyScaleCriteriaCount > 0 ? 'bg-warning/10 text-warning' : 'bg-info/10 text-info'
 					]}
 				>
 					<ListChecks class="size-4" />
 				</div>
-				<span class="text-sm font-medium text-muted-foreground">Kriteria Skala</span>
+				<span class="text-sm font-medium text-muted-foreground">Kriteria Kualitatif</span>
 			</div>
 			<span
 				class="font-display text-3xl leading-none font-semibold tracking-tighter text-foreground"

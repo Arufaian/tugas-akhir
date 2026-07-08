@@ -7,6 +7,7 @@
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import BackLinkButton from '$lib/components/back-link-button.svelte';
 	import {
 		createCriterionSchema,
 		type CreateCriterionSchema
@@ -59,121 +60,125 @@
 	<title>Tambah Kriteria</title>
 </svelte:head>
 
-<Card.Root>
-	<Card.Header>
-		<Card.Title class="font-display text-2xl font-semibold tracking-tight"
-			>Tambah Kriteria</Card.Title
-		>
-		<Card.Description class="text-sm text-muted-foreground">
-			Tentukan kriteria baru untuk penilaian motor
-		</Card.Description>
-	</Card.Header>
+<div class="flex flex-col gap-6">
+	<BackLinkButton href="/admin/criteria" label="Kembali ke Kriteria" />
 
-	<Card.Content>
-		<form method="POST" use:enhance class="flex flex-col gap-6">
-			<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-				<Form.Field {form} name="name">
+	<Card.Root>
+		<Card.Header>
+			<Card.Title class="font-display text-2xl font-semibold tracking-tight"
+				>Tambah Kriteria</Card.Title
+			>
+			<Card.Description class="text-sm text-muted-foreground">
+				Tentukan kriteria baru untuk penilaian motor
+			</Card.Description>
+		</Card.Header>
+
+		<Card.Content>
+			<form method="POST" use:enhance class="flex flex-col gap-6">
+				<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+					<Form.Field {form} name="name">
+						<Form.Control>
+							{#snippet children({ props })}
+								<Form.Label>Nama Kriteria</Form.Label>
+								<Input {...props} bind:value={$formData.name} placeholder="Cth: Harga Motor" />
+							{/snippet}
+						</Form.Control>
+						<Form.FieldErrors />
+					</Form.Field>
+
+					<Form.Field {form} name="unit">
+						<Form.Control>
+							{#snippet children({ props })}
+								<Form.Label>Satuan</Form.Label>
+								<Input {...props} bind:value={$formData.unit} placeholder="Cth: CC, kg, tahun" />
+							{/snippet}
+						</Form.Control>
+						<Form.FieldErrors />
+					</Form.Field>
+				</div>
+
+				<Form.Field {form} name="type">
 					<Form.Control>
 						{#snippet children({ props })}
-							<Form.Label>Nama Kriteria</Form.Label>
-							<Input {...props} bind:value={$formData.name} placeholder="Cth: Harga Motor" />
-						{/snippet}
-					</Form.Control>
-					<Form.FieldErrors />
-				</Form.Field>
-
-				<Form.Field {form} name="unit">
-					<Form.Control>
-						{#snippet children({ props })}
-							<Form.Label>Satuan</Form.Label>
-							<Input {...props} bind:value={$formData.unit} placeholder="Cth: CC, kg, tahun" />
-						{/snippet}
-					</Form.Control>
-					<Form.FieldErrors />
-				</Form.Field>
-			</div>
-
-			<Form.Field {form} name="type">
-				<Form.Control>
-					{#snippet children({ props })}
-						<Form.Label>Tipe Kriteria</Form.Label>
-						<RadioGroup.Root bind:value={$formData.type} {...props}>
-							{#each types as t (t.value)}
-								<div class="flex items-center gap-2">
-									<RadioGroup.Item value={t.value} id={`type-${t.value}`} />
-									<Label for={`type-${t.value}`}>{t.label}</Label>
-								</div>
-							{/each}
-						</RadioGroup.Root>
-					{/snippet}
-				</Form.Control>
-				<Form.FieldErrors />
-			</Form.Field>
-
-			<Form.Field {form} name="inputType">
-				<Form.Control>
-					{#snippet children({ props })}
-						<Form.Label>Tipe Input</Form.Label>
-						<RadioGroup.Root bind:value={$formData.inputType} {...props}>
-							{#each inputTypes as t (t.value)}
-								<div class="flex items-center gap-2">
-									<RadioGroup.Item value={t.value} id={`input-type-${t.value}`} />
-									<Label for={`input-type-${t.value}`}>{t.label}</Label>
-								</div>
-							{/each}
-						</RadioGroup.Root>
-					{/snippet}
-				</Form.Control>
-				<Form.FieldErrors />
-			</Form.Field>
-
-			<Form.Field {form} name="rawWeight">
-				<Form.Control>
-					{#snippet children({ props })}
-						<Field.Set>
-							<Field.Label>Bobot Skala</Field.Label>
-							<Field.Description>Pilih tingkat kepentingan kriteria</Field.Description>
-							<RadioGroup.Root bind:value={$formData.rawWeight} {...props}>
-								{#each weightOptions as w (w.value)}
-									<Field.Field orientation="horizontal">
-										<RadioGroup.Item value={w.value} id={`weight-${w.value}`} />
-										<Field.Label for={`weight-${w.value}`} class="font-normal"
-											>{w.value} - {w.label}</Field.Label
-										>
-									</Field.Field>
+							<Form.Label>Tipe Kriteria</Form.Label>
+							<RadioGroup.Root bind:value={$formData.type} {...props}>
+								{#each types as t (t.value)}
+									<div class="flex items-center gap-2">
+										<RadioGroup.Item value={t.value} id={`type-${t.value}`} />
+										<Label for={`type-${t.value}`}>{t.label}</Label>
+									</div>
 								{/each}
 							</RadioGroup.Root>
-						</Field.Set>
-					{/snippet}
-				</Form.Control>
-				<Form.FieldErrors />
-			</Form.Field>
+						{/snippet}
+					</Form.Control>
+					<Form.FieldErrors />
+				</Form.Field>
 
-			<Form.Field {form} name="description">
-				<Form.Control>
-					{#snippet children({ props })}
-						<Form.Label>Deskripsi</Form.Label>
-						<Textarea
-							{...props}
-							bind:value={$formData.description}
-							placeholder="Penjelasan singkat tentang kriteria ini"
-						/>
-					{/snippet}
-				</Form.Control>
-				<Form.FieldErrors />
-			</Form.Field>
+				<Form.Field {form} name="inputType">
+					<Form.Control>
+						{#snippet children({ props })}
+							<Form.Label>Tipe Input</Form.Label>
+							<RadioGroup.Root bind:value={$formData.inputType} {...props}>
+								{#each inputTypes as t (t.value)}
+									<div class="flex items-center gap-2">
+										<RadioGroup.Item value={t.value} id={`input-type-${t.value}`} />
+										<Label for={`input-type-${t.value}`}>{t.label}</Label>
+									</div>
+								{/each}
+							</RadioGroup.Root>
+						{/snippet}
+					</Form.Control>
+					<Form.FieldErrors />
+				</Form.Field>
 
-			<div class="flex justify-end gap-2">
-				<Button href={resolve('/admin/criteria')} variant="outline">Batal</Button>
-				<Form.Button disabled={$submitting}>
-					{#if $submitting}
-						<Spinner />
-						Menyimpan...
-					{:else}
-						Simpan
-					{/if}
-				</Form.Button>
-			</div>
-		</form>
-	</Card.Content>
-</Card.Root>
+				<Form.Field {form} name="rawWeight">
+					<Form.Control>
+						{#snippet children({ props })}
+							<Field.Set>
+								<Field.Label>Bobot Skala</Field.Label>
+								<Field.Description>Pilih tingkat kepentingan kriteria</Field.Description>
+								<RadioGroup.Root bind:value={$formData.rawWeight} {...props}>
+									{#each weightOptions as w (w.value)}
+										<Field.Field orientation="horizontal">
+											<RadioGroup.Item value={w.value} id={`weight-${w.value}`} />
+											<Field.Label for={`weight-${w.value}`} class="font-normal"
+												>{w.value} - {w.label}</Field.Label
+											>
+										</Field.Field>
+									{/each}
+								</RadioGroup.Root>
+							</Field.Set>
+						{/snippet}
+					</Form.Control>
+					<Form.FieldErrors />
+				</Form.Field>
+
+				<Form.Field {form} name="description">
+					<Form.Control>
+						{#snippet children({ props })}
+							<Form.Label>Deskripsi</Form.Label>
+							<Textarea
+								{...props}
+								bind:value={$formData.description}
+								placeholder="Penjelasan singkat tentang kriteria ini"
+							/>
+						{/snippet}
+					</Form.Control>
+					<Form.FieldErrors />
+				</Form.Field>
+
+				<div class="flex justify-end gap-2">
+					<Button href={resolve('/admin/criteria')} variant="outline">Batal</Button>
+					<Form.Button disabled={$submitting}>
+						{#if $submitting}
+							<Spinner />
+							Menyimpan...
+						{:else}
+							Simpan
+						{/if}
+					</Form.Button>
+				</div>
+			</form>
+		</Card.Content>
+	</Card.Root>
+</div>
