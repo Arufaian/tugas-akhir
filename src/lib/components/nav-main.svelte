@@ -31,7 +31,7 @@
 </script>
 
 <Sidebar.Group>
-	<Sidebar.GroupLabel>Platform</Sidebar.GroupLabel>
+	<Sidebar.GroupLabel>Data Master</Sidebar.GroupLabel>
 	<Sidebar.Menu>
 		{#each items as item (item.title)}
 			{#if item.items}
