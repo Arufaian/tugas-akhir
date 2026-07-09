@@ -14,7 +14,8 @@
 		criteria: 'Kriteria',
 		create: 'Tambah',
 		update: 'Edit',
-		scales: 'Nilai kriteria skala'
+		scales: 'Nilai kriteria skala',
+		'alternative-values': 'Nilai alternatif'
 	};
 
 	const breadcrumbs = $derived.by(() => {

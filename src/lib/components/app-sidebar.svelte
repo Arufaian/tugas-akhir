@@ -5,7 +5,7 @@
 	import MapIcon from '@lucide/svelte/icons/map';
 	import Settings2Icon from '@lucide/svelte/icons/settings-2';
 	import FrameIcon from '@lucide/svelte/icons/frame';
-	import { LayoutDashboard, Motorbike, Ruler } from '@lucide/svelte';
+	import { LayoutDashboard, Motorbike, ListCheck, ClipboardList } from '@lucide/svelte';
 	import SquareTerminalIcon from '@lucide/svelte/icons/square-terminal';
 
 	// This is sample data.
@@ -24,7 +24,12 @@
 			{
 				title: 'Criteria',
 				url: '/admin/criteria',
-				icon: Ruler
+				icon: ListCheck
+			},
+			{
+				title: 'Alternative Values',
+				url: '/admin/alternative-values',
+				icon: ClipboardList
 			},
 			{
 				title: 'Playground',
