@@ -81,76 +81,211 @@ Kriteria selesai:
 
 ## 3. Tunda Sampai Alternative Values
 
-### 3.1 Form Input Nilai Alternatif per Criteria
+### 3.1 Form Input Nilai Criteria per Alternative
+
+#### 3.1.1 Alur Utama
 
 Pola yang dipilih: **overview progres lalu form nilai per alternative**.
 
 `/admin/alternative-values` adalah halaman overview, bukan form matrix.
 
-- Menampilkan summary active alternatives, active criteria, nilai terisi, dan nilai kosong.
-- Menampilkan progres setiap alternative: jumlah criteria terisi dan status lengkap/belum lengkap.
-- Menampilkan readiness warning untuk alternatives, criteria, normalisasi bobot, dan scale kosong.
-- Tidak ada input nilai, autosave, spreadsheet library, atau matrix read-only pada halaman ini.
-
-Form input berada di `/admin/alternatives/[id]/values`.
+Form input berada di `/admin/alternatives/[id]/values` sebagai subresource dari satu alternative.
 
 - Satu form menampilkan seluruh active criteria untuk satu alternative.
-- Setelah simpan berhasil, halaman memuat ulang data alternative tersebut.
-- Criteria `scale` tanpa opsi tampil sebagai warning dan tidak dapat disimpan.
-- Alternative tidak aktif atau tidak ditemukan menghasilkan not found/redirect.
 - Matrix read-only untuk membandingkan seluruh alternative ditunda sampai benar-benar dibutuhkan
   sebelum kalkulasi MOORA.
 
-Mapping minimal:
+#### 3.1.2 UI/UX
 
-| inputType       | UI                             | Nilai yang disimpan                                                        |
-| --------------- | ------------------------------ | -------------------------------------------------------------------------- |
-| `number`        | Input number                   | `rawValue` dari input                                                      |
-| `scale`         | Select dari `criterion_scales` | `rawValue = criterion_scales.value`, `labelValue = criterion_scales.label` |
-| `tech_features` | Checklist fitur teknologi      | `rawValue` = total skor 0-100; `labelValue` = JSON ID fitur terpilih       |
+Halaman overview:
 
-Kontrak `tech_features`:
+- Menampilkan summary active alternatives, active criteria, nilai terisi, dan nilai kosong.
+- Menampilkan progres setiap alternative: jumlah criteria terisi dan status lengkap/belum lengkap.
+- Menampilkan readiness warning untuk alternatives, criteria, normalisasi bobot, dan scale kosong.
+- Menyediakan link **Isi/Edit Nilai** ke `/admin/alternatives/[id]/values`.
+- Tidak memiliki input nilai, autosave, spreadsheet library, atau matrix read-only.
 
-- Daftar fitur dan skornya tetap di `src/lib/constants/technology-features.ts`.
-- Server menghitung ulang skor dari ID fitur yang valid; total dari browser tidak dipercaya.
-- `labelValue` menyimpan JSON ID fitur agar checklist dapat dipulihkan saat edit.
-- Nilai `0` adalah penilaian valid tanpa fitur; cell yang belum dinilai tidak memiliki row database.
+Halaman form:
 
-Catatan implementasi form:
+- Gunakan satu `<form method="POST" use:enhance>` yang membungkus satu `Card.Root`.
+- Gunakan `Card.Header` untuk identitas alternative, `Card.Content` untuk seluruh criteria, dan
+  `Card.Footer` untuk tombol batal dan simpan. Tidak perlu satu card per criteria.
+- Gunakan `Field.Group` sebagai container criteria dan `Field.Separator` sebagai pemisah.
+- Form menggunakan satu kolom agar mudah dipindai di desktop dan mobile.
 
-- Load mengambil alternative aktif terkait, active criteria, existing
-  `alternative_criterion_values`, dan `criterion_scales`.
-- Input `number` menyimpan `rawValue` dari form.
-- Input `scale` hanya menerima opsi `criterion_scales` milik criterion; server menetapkan
+Konfigurasi Superforms:
+
+```ts
+superForm(data.form, {
+	dataType: 'json',
+	multipleSubmits: 'prevent',
+	resetForm: false,
+	invalidateAll: 'pessimistic'
+});
+```
+
+- JSON mode mengirim seluruh `$formData.values`, termasuk boolean `false`, array kosong, dan state
+  control yang dinonaktifkan, tanpa bergantung pada serialisasi native `FormData`.
+- Inisialisasi `$formData.values` dari active criteria. Setiap item selalu memiliki `criterionId`,
+  `value`, `isAssessed`, dan `selectedFeatureIds`.
+- `criterionId` tidak memerlukan hidden input karena seluruh state dikirim sebagai JSON.
+- Render criteria dengan keyed `{#each}` berdasarkan `criterionId`, bukan index sebagai identity.
+
+Formsnap dan Field:
+
+- Gunakan `Form.Field` pada leaf path `values[{index}].value`,
+  `values[{index}].isAssessed`, dan `values[{index}].selectedFeatureIds`.
+- `Form.ElementField` tidak digunakan karena komponen tersebut ditujukan untuk field yang langsung
+  merepresentasikan satu elemen array, bukan property dari object array.
+- Gunakan `Form.Control` dan `Form.FieldErrors` untuk koneksi control, atribut aksesibel,
+  constraints, dan validation error.
+- Gunakan `Field.Field`, `Field.Content`, dan `Field.Description` untuk layout visual.
+- Input tunggal `number`, `scale`, dan `isAssessed` menggunakan `Form.Label` agar label terhubung
+  dengan ID dari Formsnap.
+- Kelompok fitur menggunakan `Field.Set` + `Field.Legend`; setiap checkbox menggunakan
+  `Field.Label` dengan `for` yang sesuai. Jangan gabungkan `Form.Fieldset` dengan `Field.Set` agar
+  tidak menghasilkan fieldset bertingkat.
+- Ambil `errors` dari snippet `Form.Field`, gunakan `data-invalid={errors.length > 0}` pada wrapper,
+  dan sebarkan props `Form.Control` tanpa mengganti ID atau atribut ARIA yang disediakan Formsnap.
+- Validation error tampil inline; toast hanya digunakan untuk sukses atau kegagalan penyimpanan
+  secara keseluruhan.
+
+Komponen per tipe input:
+
+| inputType       | Komponen shadcn-svelte                                               | Nilai yang disimpan                                                        |
+| --------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `number`        | `InputGroup.Input`; addon satuan bersifat kondisional                | String desimal tervalidasi disimpan sebagai `rawValue`                     |
+| `scale`         | `Select` dari `criterion_scales`; `Alert` jika opsi kosong           | `rawValue = criterion_scales.value`, `labelValue = criterion_scales.label` |
+| `tech_features` | `Switch` status penilaian + kelompok `Checkbox` + `Badge` skor fitur | `rawValue` = total skor 0-100; `labelValue` = JSON ID fitur terpilih       |
+
+Detail interaksi:
+
+- `number` selalu menggunakan `InputGroup.Root` + `InputGroup.Input` dengan `type="text"` dan
+  `inputmode="decimal"` agar nilai tetap berupa string. Render `InputGroup.Addon` +
+  `InputGroup.Text` hanya jika satuan tersedia.
+- `scale` menggunakan `Select.Root`, `Select.Trigger`, `Select.Content`, dan `Select.Item`.
+  `Select.Group` hanya digunakan jika opsi memang memiliki kelompok semantik.
+- Untuk `Select`, destructure props `Form.Control` menjadi `name` dan `triggerProps`; berikan
+  `name` ke `Select.Root` dan `triggerProps` ke `Select.Trigger`. Trigger menampilkan label opsi
+  terpilih, bukan angka mentah.
+- Criteria scale tanpa opsi tetap memiliki item state dengan `criterionId` dan `value: ''`.
+  Tampilkan `Alert.Root`, `Alert.Title`, dan `Alert.Description` dengan ikon `AlertTriangle`, lalu
+  jangan render Select aktif. Nilai criteria lain tetap dapat disimpan.
+- `isAssessed` menggunakan satu `Form.Field`, satu `Form.Control`, `Switch`, dan `Form.Label`
+  berlabel **Penilaian fitur sudah dilakukan**. Deskripsi menjelaskan bahwa switch tetap
+  diaktifkan saat tidak ada fitur agar nilai `0` tercatat.
+- `selectedFeatureIds` menggunakan satu `Form.Field` untuk seluruh array, satu `Field.Set`, satu
+  `Field.Legend`, dan satu `Form.Control` terpisah untuk setiap checkbox agar ID dan label unik.
+  Letakkan satu `Form.FieldErrors` setelah seluruh kelompok.
+- Setiap checkbox menggunakan `value={feature.id}` dan binding getter/setter untuk memperbarui
+  membership `selectedFeatureIds` secara immutable tanpa ID duplikat. Tampilkan skor fitur dengan
+  `Badge`.
+- Saat `isAssessed = false`, checkbox dinonaktifkan tetapi `selectedFeatureIds` tidak dihapus dari
+  state client. Payload JSON tetap boleh membawa array tersebut; server mengabaikannya. Jika switch
+  diaktifkan kembali sebelum meninggalkan halaman, pilihan sebelumnya langsung muncul kembali.
+- Tombol submit menggunakan `Form.Button disabled={$submitting}` dan menampilkan
+  `<Spinner aria-label="Menyimpan" />` serta teks **Menyimpan...** selama submit.
+- Tombol batal menggunakan `Button variant="outline"` untuk kembali ke halaman overview.
+- Action mengembalikan message sukses/error. Callback `onUpdated` menampilkan toast hanya ketika
+  message tersedia; invalidasi pessimistic memuat hasil load terbaru tanpa mereset form lebih dulu.
+- Tidak menggunakan dialog konfirmasi, autosave, accordion, atau sticky footer.
+
+#### 3.1.3 Backend dan Data
+
+Load halaman:
+
+- Mengambil alternative aktif terkait, active criteria, existing `alternative_criterion_values`,
+  dan `criterion_scales` yang relevan.
+- Memfilter nilai dan scale di query berdasarkan alternative dan active criteria yang dipakai form.
+- Alternative tidak aktif atau tidak ditemukan menghasilkan `404`.
+
+Payload form minimal:
+
+```ts
+{
+	values: Array<{
+		criterionId: string;
+		value: string;
+		selectedFeatureIds: string[];
+		isAssessed: boolean;
+	}>;
+}
+```
+
+- `value` dikirim sebagai string agar validasi batas `numeric(14,4)` tidak terkena pembulatan
+  JavaScript.
+- Untuk tipe yang tidak memakai property tertentu, kirim nilai netral: `value: ''`,
+  `selectedFeatureIds: []`, atau `isAssessed: false`. Server hanya membaca property yang relevan
+  berdasarkan tipe criteria dari database.
+- Browser tidak mengirim atau menentukan `inputType`; server mengambil tipe criteria berdasarkan
+  `criterionId` dari database.
+- Server memvalidasi seluruh payload sebelum melakukan perubahan database.
+
+Validasi dan mapping:
+
+- Input `number` harus berupa desimal non-negatif, maksimal 10 digit sebelum desimal, dan maksimal
+  4 digit setelah desimal. Nilai disimpan sebagai string numeric.
+- Input `scale` hanya menerima opsi `criterion_scales` milik criterion terkait. Server menetapkan
   `rawValue` dan `labelValue` dari database.
-- Input `tech_features` adalah checklist fitur; server menghitung total skor dan menyimpan JSON
-  ID fitur di `labelValue`.
-- Nilai lama yang dikosongkan menghapus row database terkait. Input kosong baru tidak membuat row.
-- Action memvalidasi seluruh payload sebelum menjalankan delete/upsert dalam satu transaction.
+- Daftar fitur teknologi dan skornya tetap di
+  `src/lib/constants/technology-features.ts`.
+- Server memvalidasi ID fitur dan menghitung ulang skor; total dari browser tidak dipercaya.
+- `labelValue` untuk `tech_features` menyimpan JSON ID fitur agar checklist dapat dipulihkan saat
+  edit.
+- Nilai `0` valid saat `isAssessed = true` tanpa fitur terpilih. Cell dengan
+  `isAssessed = false` dianggap belum dinilai dan tidak memiliki row database.
 
-Kriteria selesai:
+Penyimpanan:
 
-- Setiap alternative punya maksimal satu value per criterion.
-- Constraint unique `(alternativeId, criterionId)` tetap dipakai.
-- `rawValue` selalu numerik dan non-negative.
-- Admin bisa menyimpan semua nilai criteria untuk satu alternative dari satu halaman.
-- Criteria scale hanya bisa dipilih dari opsi `criterion_scales` milik criteria tersebut.
-- Criteria scale yang belum punya opsi tidak menyebabkan submit gagal untuk cell lain.
+- Nilai lama `number`/`scale` yang dikosongkan atau `tech_features` dengan `isAssessed = false`
+  menghapus row database terkait. Input kosong baru tidak membuat row.
+- Delete dan upsert dijalankan dalam satu transaction agar penyimpanan gagal secara atomik.
+- Constraint unique `(alternativeId, criterionId)` tetap menjamin maksimal satu value per
+  criterion untuk setiap alternative.
+- Hapus action `save` lama dari `/admin/alternative-values` agar hanya form per alternative yang
+  dapat menulis nilai.
 
-Status dan pekerjaan tersisa:
+#### 3.1.4 Kriteria Selesai UI/UX
+
+- Admin dapat membuka form isi/edit nilai dari halaman overview.
+- Admin dapat mengisi seluruh active criteria untuk satu alternative dari satu halaman.
+- Seluruh input memiliki label aksesibel dan input angka menampilkan satuan jika tersedia.
+- Criteria scale tanpa opsi menampilkan warning tanpa menggagalkan penyimpanan criteria lain.
+- Checklist fitur kosong yang sudah dinilai dapat dibedakan dari cell yang belum dinilai.
+- Submit menampilkan status proses, mencegah submit berulang, dan memberikan toast hasil.
+
+#### 3.1.5 Kriteria Selesai Backend
+
+- Setiap alternative memiliki maksimal satu value per criterion.
+- `rawValue` selalu numerik, non-negative, dan sesuai batas `numeric(14,4)`.
+- Criteria scale hanya dapat dipilih dari opsi milik criterion tersebut.
+- Skor `tech_features` selalu dihitung ulang dari ID fitur yang valid.
+- Nilai yang dikosongkan dihapus dan seluruh perubahan disimpan dalam satu transaction.
+- Alternative tidak aktif atau tidak ditemukan tidak dapat menerima nilai.
+
+#### 3.1.6 Status Pekerjaan
+
+UI/UX:
 
 - [x] Ubah `/admin/alternative-values` dari matrix input menjadi overview progres.
-- [ ] Validasi setiap input terhadap batas `numeric(14,4)`: non-negatif, maksimal 10 digit sebelum desimal, dan maksimal 4 digit desimal.
 - [ ] Buat form `/admin/alternatives/[id]/values` berdasarkan active criteria.
+- [ ] Tambahkan label aksesibel dan satuan untuk input angka jika tersedia.
+- [ ] Tambahkan checklist `tech_features` dan kontrol `isAssessed`.
+- [ ] Tambahkan link isi/edit nilai dari overview ke `/admin/alternatives/[id]/values`.
+- [ ] Tambahkan status submit, toast hasil, dan invalidasi data setelah penyimpanan.
+
+Backend:
+
+- [ ] Validasi setiap input terhadap batas `numeric(14,4)`: non-negatif, maksimal 10 digit
+      sebelum desimal, dan maksimal 4 digit desimal.
 - [ ] Validasi alternative, criteria, dan seluruh payload form secara ketat di server.
 - [ ] Jalankan delete dan upsert dalam satu transaction agar save gagal secara atomik.
 - [ ] Filter nilai dan scale di query load ke alternative dan criteria aktif yang dipakai form.
-- [ ] Tambahkan label aksesibel dan satuan untuk seluruh input angka.
 - [x] Tetapkan daftar 10 fitur teknologi tetap dengan total skor maksimum 100.
 - [x] Tambahkan constant dan validasi perhitungan skor fitur.
 - [x] Hapus nilai `tech_features` di atas 100 yang tidak dapat dipetakan kembali ke fitur asal.
-- [ ] Tambahkan checklist `tech_features` ke form alternative.
 - [ ] Validasi ID fitur dan hitung skor di action server.
+- [ ] Hapus action `save` matrix lama dari `/admin/alternative-values`.
 
 ### 3.2 Guard Delete Criteria
 
@@ -238,15 +373,17 @@ Kriteria selesai:
 
 ### Saat Alternative Values
 
-1. Buat schema validasi alternative criterion value.
-2. Ubah `/admin/alternative-values` menjadi overview kelengkapan per alternative.
-3. Buat form nilai per alternative berdasarkan active criteria.
-4. Implement checklist `tech_features` dan mapping `scale` ke `rawValue` + `labelValue`.
-5. Validasi dan simpan seluruh form dalam satu transaction.
-6. Tambah completeness checker.
-7. Tambah guard delete criteria dan scale.
-8. Implement MOORA calculation service.
-9. Tambah tests untuk mapping scale, feature calculator, completeness checker, dan kalkulasi MOORA.
+1. Tetapkan schema payload dinamis alternative criterion value.
+2. Buat form nilai per alternative berdasarkan active criteria.
+3. Implement mapping `number`, `scale`, dan checklist `tech_features`.
+4. Validasi dan simpan seluruh form dalam satu transaction.
+5. Tambahkan link isi/edit nilai dari overview.
+6. Hapus action `save` matrix lama dari overview.
+7. Tambah tests untuk mapping payload dan penyimpanan atomik.
+8. Tambah completeness checker.
+9. Tambah guard delete criteria dan scale.
+10. Implement MOORA calculation service.
+11. Tambah tests untuk completeness checker dan kalkulasi MOORA.
 
 ## 5. Yang Tidak Dikerjakan Sekarang
 

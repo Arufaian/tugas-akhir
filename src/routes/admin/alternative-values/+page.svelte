@@ -200,6 +200,15 @@
 							</div>
 							<Progress value={alternative.filledCount} max={data.criteria.length} />
 						</Card.Content>
+						<Card.Footer class="justify-end">
+							<Button
+								href={`/admin/alternatives/${alternative.id}/values`}
+								variant="outline"
+								size="sm"
+							>
+								{alternative.filledCount > 0 ? 'Edit Nilai' : 'Isi Nilai'}
+							</Button>
+						</Card.Footer>
 					</Card.Root>
 				{/each}
 			</Card.Content>
