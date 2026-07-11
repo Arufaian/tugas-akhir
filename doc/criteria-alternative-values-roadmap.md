@@ -83,7 +83,23 @@ Kriteria selesai:
 
 ### 3.1 Form Input Nilai Alternatif per Criteria
 
-Saat fitur alternative values dibuat, form input nilai harus mengikuti `criteria.inputType`.
+Pola yang dipilih: **overview progres lalu form nilai per alternative**.
+
+`/admin/alternative-values` adalah halaman overview, bukan form matrix.
+
+- Menampilkan summary active alternatives, active criteria, nilai terisi, dan nilai kosong.
+- Menampilkan progres setiap alternative: jumlah criteria terisi dan status lengkap/belum lengkap.
+- Menampilkan readiness warning untuk alternatives, criteria, normalisasi bobot, dan scale kosong.
+- Tidak ada input nilai, autosave, spreadsheet library, atau matrix read-only pada halaman ini.
+
+Form input berada di `/admin/alternatives/[id]/values`.
+
+- Satu form menampilkan seluruh active criteria untuk satu alternative.
+- Setelah simpan berhasil, halaman memuat ulang data alternative tersebut.
+- Criteria `scale` tanpa opsi tampil sebagai warning dan tidak dapat disimpan.
+- Alternative tidak aktif atau tidak ditemukan menghasilkan not found/redirect.
+- Matrix read-only untuk membandingkan seluruh alternative ditunda sampai benar-benar dibutuhkan
+  sebelum kalkulasi MOORA.
 
 Mapping minimal:
 
@@ -91,13 +107,50 @@ Mapping minimal:
 | --------------- | ------------------------------ | -------------------------------------------------------------------------- |
 | `number`        | Input number                   | `rawValue` dari input                                                      |
 | `scale`         | Select dari `criterion_scales` | `rawValue = criterion_scales.value`, `labelValue = criterion_scales.label` |
-| `tech_features` | Ditentukan nanti               | `rawValue` hasil mapping fitur                                             |
+| `tech_features` | Checklist fitur teknologi      | `rawValue` = total skor 0-100; `labelValue` = JSON ID fitur terpilih       |
+
+Kontrak `tech_features`:
+
+- Daftar fitur dan skornya tetap di `src/lib/constants/technology-features.ts`.
+- Server menghitung ulang skor dari ID fitur yang valid; total dari browser tidak dipercaya.
+- `labelValue` menyimpan JSON ID fitur agar checklist dapat dipulihkan saat edit.
+- Nilai `0` adalah penilaian valid tanpa fitur; cell yang belum dinilai tidak memiliki row database.
+
+Catatan implementasi form:
+
+- Load mengambil alternative aktif terkait, active criteria, existing
+  `alternative_criterion_values`, dan `criterion_scales`.
+- Input `number` menyimpan `rawValue` dari form.
+- Input `scale` hanya menerima opsi `criterion_scales` milik criterion; server menetapkan
+  `rawValue` dan `labelValue` dari database.
+- Input `tech_features` adalah checklist fitur; server menghitung total skor dan menyimpan JSON
+  ID fitur di `labelValue`.
+- Nilai lama yang dikosongkan menghapus row database terkait. Input kosong baru tidak membuat row.
+- Action memvalidasi seluruh payload sebelum menjalankan delete/upsert dalam satu transaction.
 
 Kriteria selesai:
 
 - Setiap alternative punya maksimal satu value per criterion.
 - Constraint unique `(alternativeId, criterionId)` tetap dipakai.
 - `rawValue` selalu numerik dan non-negative.
+- Admin bisa menyimpan semua nilai criteria untuk satu alternative dari satu halaman.
+- Criteria scale hanya bisa dipilih dari opsi `criterion_scales` milik criteria tersebut.
+- Criteria scale yang belum punya opsi tidak menyebabkan submit gagal untuk cell lain.
+
+Status dan pekerjaan tersisa:
+
+- [x] Ubah `/admin/alternative-values` dari matrix input menjadi overview progres.
+- [ ] Validasi setiap input terhadap batas `numeric(14,4)`: non-negatif, maksimal 10 digit sebelum desimal, dan maksimal 4 digit desimal.
+- [ ] Buat form `/admin/alternatives/[id]/values` berdasarkan active criteria.
+- [ ] Validasi alternative, criteria, dan seluruh payload form secara ketat di server.
+- [ ] Jalankan delete dan upsert dalam satu transaction agar save gagal secara atomik.
+- [ ] Filter nilai dan scale di query load ke alternative dan criteria aktif yang dipakai form.
+- [ ] Tambahkan label aksesibel dan satuan untuk seluruh input angka.
+- [x] Tetapkan daftar 10 fitur teknologi tetap dengan total skor maksimum 100.
+- [x] Tambahkan constant dan validasi perhitungan skor fitur.
+- [x] Hapus nilai `tech_features` di atas 100 yang tidak dapat dipetakan kembali ke fitur asal.
+- [ ] Tambahkan checklist `tech_features` ke form alternative.
+- [ ] Validasi ID fitur dan hitung skor di action server.
 
 ### 3.2 Guard Delete Criteria
 
@@ -126,6 +179,20 @@ Kriteria selesai:
 
 - Scale yang sudah dipakai tidak hilang diam-diam.
 - Admin mendapat pesan kenapa scale tidak bisa dihapus.
+
+### 3.3.1 Guard Update Criterion Scale
+
+Mengubah `value` atau menghapus scale yang sudah dipakai dapat membuat `rawValue` dan `labelValue` pada matrix tidak lagi merujuk ke opsi yang valid.
+
+Pilihan minimal:
+
+- Blok perubahan `value` dan delete jika scale sudah digunakan oleh alternative value.
+- Label dan deskripsi masih boleh diperbarui, tetapi pertimbangkan apakah histori nilai perlu mempertahankan label lama.
+
+Kriteria selesai:
+
+- Nilai matrix yang tersimpan selalu dapat dipetakan ke opsi scale yang masih valid.
+- Summary matrix tidak menghitung nilai scale yatim sebagai cell terisi.
 
 ### 3.4 Validasi Kelengkapan Decision Matrix
 
@@ -172,20 +239,23 @@ Kriteria selesai:
 ### Saat Alternative Values
 
 1. Buat schema validasi alternative criterion value.
-2. Buat UI input values berdasarkan active criteria.
-3. Implement mapping `scale` ke `rawValue` + `labelValue`.
-4. Tambah completeness checker.
-5. Tambah guard delete criteria.
-6. Tambah guard delete scale.
-7. Implement MOORA calculation service.
-8. Tambah tests untuk mapping scale, completeness checker, dan kalkulasi MOORA.
+2. Ubah `/admin/alternative-values` menjadi overview kelengkapan per alternative.
+3. Buat form nilai per alternative berdasarkan active criteria.
+4. Implement checklist `tech_features` dan mapping `scale` ke `rawValue` + `labelValue`.
+5. Validasi dan simpan seluruh form dalam satu transaction.
+6. Tambah completeness checker.
+7. Tambah guard delete criteria dan scale.
+8. Implement MOORA calculation service.
+9. Tambah tests untuk mapping scale, feature calculator, completeness checker, dan kalkulasi MOORA.
 
 ## 5. Yang Tidak Dikerjakan Sekarang
 
 - Tidak membuat FK `criterionScaleId` di `alternative_criterion_values`.
 - Tidak membuat calculation service.
 - Tidak membuat guard delete berbasis alternative values.
-- Tidak membuat UI input alternative values.
+- Tidak membuat matrix read-only untuk membandingkan nilai semua alternative.
 - Tidak mengubah cascade DB sekarang.
 
-Alasannya: branch sekarang fokus merapikan criteria dan scales. Alternative values belum masuk flow utama, jadi guard dan kalkulasi penuh lebih aman dikerjakan saat data entry alternative values dibuat.
+Alasannya: data entry memakai form per alternative agar input number, scale, dan feature checklist
+tetap sederhana. Matrix read-only, guard delete, dan kalkulasi penuh dikerjakan saat kebutuhan
+operasionalnya sudah masuk flow utama.
