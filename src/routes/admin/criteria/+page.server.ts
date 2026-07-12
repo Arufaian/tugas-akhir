@@ -9,6 +9,7 @@ export async function load() {
 	const scaleCounts = await db
 		.select({ criterionId: criterionScalesTable.criterionId, count: count() })
 		.from(criterionScalesTable)
+		.where(eq(criterionScalesTable.isActive, true))
 		.groupBy(criterionScalesTable.criterionId);
 	const scaleCountMap = new Map(scaleCounts.map((r) => [r.criterionId, r.count]));
 	const criteria = rows.map((r) => ({ ...r, scaleCount: scaleCountMap.get(r.id) ?? 0 }));

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { PATCH } from './+server.js';
 import { actions } from './+page.server.js';
 
 const {
@@ -73,6 +74,17 @@ function updatePost(value: string, label = 'Diperbarui') {
 	} as unknown as Parameters<typeof actions.update>[0];
 }
 
+function patchStatus(isActive: unknown, id = criterionId, submittedScaleId = scaleId) {
+	return {
+		params: { id },
+		request: new Request(`http://localhost/admin/criteria/${id}/scales`, {
+			method: 'PATCH',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ scaleId: submittedScaleId, isActive })
+		})
+	} as Parameters<typeof PATCH>[0];
+}
+
 function useTransaction(scaleRows: unknown[], valueRows: unknown[] = []) {
 	mockSelect.mockReturnValueOnce(scaleQuery(scaleRows)).mockReturnValueOnce(valueQuery(valueRows));
 	mockTransaction.mockImplementation(async (callback) =>
@@ -87,6 +99,50 @@ function useUpdateTransaction(scaleRows: unknown[], valueRows?: unknown[]) {
 		callback({ select: mockSelect, update: mockUpdate })
 	);
 }
+
+describe('criterion scale status', () => {
+	beforeEach(() => {
+		vi.resetAllMocks();
+		mockUpdateSet.mockReturnValue({ where: mockUpdateWhere });
+		mockUpdate.mockReturnValue({ set: mockUpdateSet });
+	});
+
+	it('returns 400 for an invalid criterion, scale, or status', async () => {
+		expect((await PATCH(patchStatus(true, 'invalid-id'))).status).toBe(400);
+		expect((await PATCH(patchStatus(true, criterionId, 'invalid-id'))).status).toBe(400);
+		expect((await PATCH(patchStatus('false'))).status).toBe(400);
+		expect(mockTransaction).not.toHaveBeenCalled();
+	});
+
+	it('returns 404 when the scale does not belong to the criterion', async () => {
+		useUpdateTransaction([]);
+
+		const response = await PATCH(patchStatus(false));
+
+		expect(response.status).toBe(404);
+		expect(mockFor).toHaveBeenCalledWith('update');
+		expect(mockUpdate).not.toHaveBeenCalled();
+	});
+
+	it.each([false, true])('sets isActive to %s inside the locked transaction', async (isActive) => {
+		useUpdateTransaction([{ id: scaleId }]);
+
+		const response = await PATCH(patchStatus(isActive));
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({ success: true, isActive });
+		expect(mockUpdateSet).toHaveBeenCalledWith({ isActive, updatedAt: expect.any(Date) });
+	});
+
+	it('returns a generic 500 response when the database fails', async () => {
+		mockTransaction.mockRejectedValue(new Error('sensitive database error'));
+
+		const response = await PATCH(patchStatus(false));
+
+		expect(response.status).toBe(500);
+		expect(await response.json()).toEqual({ message: 'Gagal mengubah status skala' });
+	});
+});
 
 describe('delete criterion scale guard', () => {
 	beforeEach(() => {

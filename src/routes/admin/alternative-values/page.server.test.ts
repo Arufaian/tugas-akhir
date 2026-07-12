@@ -14,14 +14,14 @@ function activeQuery(rows: unknown[]) {
 }
 
 function orderedQuery(rows: unknown[]) {
-	return { from: () => ({ orderBy: async () => rows }) };
+	return { from: () => ({ where: () => ({ orderBy: async () => rows }) }) };
 }
 
 function rowsQuery(rows: unknown[]) {
 	return { from: async () => rows };
 }
 
-function setup(rawValue: string) {
+function setup(rawValue: string, hasScale = true) {
 	mockSelect
 		.mockReturnValueOnce(activeQuery([{ id: alternativeId, code: 'A1', name: 'Alternative Test' }]))
 		.mockReturnValueOnce(
@@ -36,7 +36,9 @@ function setup(rawValue: string) {
 				}
 			])
 		)
-		.mockReturnValueOnce(orderedQuery([{ criterionId, label: 'Cukup', value: '3.0000' }]))
+		.mockReturnValueOnce(
+			orderedQuery(hasScale ? [{ criterionId, label: 'Cukup', value: '3.0000' }] : [])
+		)
 		.mockReturnValueOnce(
 			rowsQuery([{ alternativeId, criterionId, rawValue, labelValue: 'Cukup' }])
 		);
@@ -64,5 +66,15 @@ describe('alternative values overview scale readiness', () => {
 
 		expect(result.summary.filledCellCount).toBe(1);
 		expect(result.completeness.isComplete).toBe(true);
+	});
+
+	it('reports a value as invalid when its scale is inactive', async () => {
+		setup('3.0000', false);
+
+		const result = await load();
+
+		expect(result.summary.filledCellCount).toBe(0);
+		expect(result.emptyScaleCriteria).toHaveLength(1);
+		expect(result.completeness.alternatives[0].missingCriteria[0].reason).toBe('invalid_scale');
 	});
 });

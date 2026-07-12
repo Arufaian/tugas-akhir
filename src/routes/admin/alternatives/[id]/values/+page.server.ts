@@ -72,7 +72,12 @@ export const load: PageServerLoad = async ({ params }) => {
 						value: criterionScalesTable.value
 					})
 					.from(criterionScalesTable)
-					.where(inArray(criterionScalesTable.criterionId, criterionIds))
+					.where(
+						and(
+							inArray(criterionScalesTable.criterionId, criterionIds),
+							eq(criterionScalesTable.isActive, true)
+						)
+					)
 					.orderBy(asc(criterionScalesTable.orderIndex)),
 				db
 					.select({
@@ -98,6 +103,9 @@ export const load: PageServerLoad = async ({ params }) => {
 	}
 
 	const valuesByCriterionId = new Map(existingValues.map((value) => [value.criterionId, value]));
+	const activeScaleValues = new Set(
+		scales.map((scale) => `${scale.criterionId}:${canonicalDecimal(scale.value)}`)
+	);
 	const criteria = activeCriteria.map((criterion) => ({
 		...criterion,
 		scales: scalesByCriterionId.get(criterion.id) ?? []
@@ -117,7 +125,13 @@ export const load: PageServerLoad = async ({ params }) => {
 								? ''
 								: criterion.inputType === 'number' && existing
 									? canonicalDecimal(existing.rawValue)
-									: (existing?.rawValue ?? ''),
+									: criterion.inputType === 'scale' &&
+										  existing &&
+										  activeScaleValues.has(
+												`${criterion.id}:${canonicalDecimal(existing.rawValue)}`
+										  )
+										? existing.rawValue
+										: '',
 						selectedFeatureIds:
 							criterion.inputType === 'tech_features'
 								? parseFeatureIds(existing?.labelValue ?? null)
@@ -191,8 +205,13 @@ export const actions: Actions = {
 								value: criterionScalesTable.value
 							})
 							.from(criterionScalesTable)
-							.where(inArray(criterionScalesTable.criterionId, criterionIds))
-							.for('key share')
+							.where(
+								and(
+									inArray(criterionScalesTable.criterionId, criterionIds),
+									eq(criterionScalesTable.isActive, true)
+								)
+							)
+							.for('share')
 					: [];
 				const scalesByCriterionAndValue = new Map(
 					scales.map((scale) => [`${scale.criterionId}:${canonicalDecimal(scale.value)}`, scale])

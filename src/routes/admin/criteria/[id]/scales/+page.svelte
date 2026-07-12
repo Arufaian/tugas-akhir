@@ -4,11 +4,13 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import { Progress } from '$lib/components/ui/progress/index.js';
+	import { Switch } from '$lib/components/ui/switch/index.js';
 	import BackLinkButton from '$lib/components/back-link-button.svelte';
 	import { Ruler, Plus, Pencil, Trash2 } from '@lucide/svelte';
 	import { superForm } from 'sveltekit-superforms';
 	import { zod4Client } from 'sveltekit-superforms/adapters';
 	import { toast } from 'svelte-sonner';
+	import { invalidateAll } from '$app/navigation';
 	import {
 		createCriterionScaleSchema,
 		deleteCriterionScaleSchema
@@ -29,6 +31,7 @@
 	let deleteDialogOpen = $state(false);
 	let editingScale = $state<Scale | null>(null);
 	let deletingScale = $state<Scale | null>(null);
+	let pendingStatus = $state<{ id: string; isActive: boolean } | null>(null);
 
 	const initialForm = () => data.form;
 	const f = superForm(initialForm(), {
@@ -87,6 +90,33 @@
 	function closeDeleteDialog() {
 		deleteDialogOpen = false;
 		deletingScale = null;
+	}
+
+	function currentStatus(scale: Scale) {
+		return pendingStatus?.id === scale.id ? pendingStatus.isActive : scale.isActive;
+	}
+
+	async function updateStatus(scale: Scale, isActive: boolean) {
+		pendingStatus = { id: scale.id, isActive };
+
+		try {
+			const response = await fetch(`/admin/criteria/${criterion.id}/scales`, {
+				method: 'PATCH',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ scaleId: scale.id, isActive })
+			});
+			if (!response.ok) {
+				const data = await response.json().catch(() => ({}));
+				throw new Error(data.message || 'Gagal mengubah status skala');
+			}
+
+			toast.success(isActive ? 'Skala berhasil diaktifkan' : 'Skala berhasil dinonaktifkan');
+			await invalidateAll();
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : 'Terjadi kesalahan');
+		} finally {
+			pendingStatus = null;
+		}
 	}
 </script>
 
@@ -185,13 +215,27 @@
 									<Trash2 />
 									<span class="hidden text-sm sm:inline">Hapus</span>
 								</Button>
+
+								<div class="">
+									<label class="sr-only" for={`scale-status-${scale.id}`}>
+										Status {scale.label}
+									</label>
+									<Switch
+										id={`scale-status-${scale.id}`}
+										checked={currentStatus(scale)}
+										disabled={pendingStatus !== null}
+										onCheckedChange={(checked) => updateStatus(scale, checked)}
+									/>
+								</div>
 							</div>
 						</div>
 					</div>
 
-					<Badge variant="default" class="shrink-0 tabular-nums">
-						{scale.value}
-					</Badge>
+					<div class="shrink-0 tabular-nums">
+						<Badge variant="default" class="tabular-nums">
+							{scale.value}
+						</Badge>
+					</div>
 				</div>
 
 				{#if i < scales.length - 1}

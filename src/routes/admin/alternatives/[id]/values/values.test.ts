@@ -168,6 +168,7 @@ describe('alternative values backend', () => {
 			.mockReturnValueOnce(
 				rowsQuery([
 					{ criterionId: numberId, rawValue: '32500000.0000', labelValue: null },
+					{ criterionId: scaleId, rawValue: '4.0000', labelValue: 'Nonaktif' },
 					{ criterionId: featuresId, rawValue: '20.0000', labelValue: '["abs","smart-key"]' }
 				])
 			);
@@ -203,7 +204,7 @@ describe('alternative values backend', () => {
 			})
 		]);
 		expect(mockUpsert).toHaveBeenCalledOnce();
-		expect(mockScaleLock).toHaveBeenCalledWith('key share');
+		expect(mockScaleLock).toHaveBeenCalledWith('share');
 	});
 
 	it('deletes empty and unassessed values without inserting nulls', async () => {

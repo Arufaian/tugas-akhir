@@ -379,22 +379,23 @@ Keputusan minimal:
 
 Pekerjaan:
 
-- [ ] Tambahkan kolom `is_active boolean not null default true` melalui schema dan migration.
-- [ ] Ubah delete scale menjadi update `isActive = false` dan `updatedAt`.
-- [ ] Tambahkan `Switch` pada setiap row scale untuk menonaktifkan atau mengaktifkan kembali scale.
-- [ ] Tampilkan scale aktif dan nonaktif pada halaman pengelolaan beserta statusnya.
-- [ ] Tampilkan toast sukses atau pesan error dari server setelah perubahan status.
-- [ ] Nonaktifkan `Switch` selama request berjalan dan pulihkan posisi sebelumnya jika request
+- [x] Tambahkan kolom `is_active boolean not null default true` melalui schema dan migration.
+- [x] Tambahkan endpoint status untuk mengubah `isActive` dan `updatedAt` tanpa menghapus row.
+- [x] Pertahankan hard delete hanya untuk scale yang belum digunakan.
+- [x] Tambahkan `Switch` pada setiap row scale untuk menonaktifkan atau mengaktifkan kembali scale.
+- [x] Tampilkan scale aktif dan nonaktif pada halaman pengelolaan beserta statusnya.
+- [x] Tampilkan toast sukses atau pesan error dari server setelah perubahan status.
+- [x] Nonaktifkan `Switch` selama request berjalan dan pulihkan posisi sebelumnya jika request
       gagal.
-- [ ] Filter hanya scale aktif pada form nilai, validasi save, summary kesiapan scale, dan
+- [x] Filter hanya scale aktif pada form nilai, validasi save, summary kesiapan scale, dan
       completeness checker.
-- [ ] Pertahankan row locking saat save, update, nonaktifkan, dan pulihkan scale.
+- [x] Pertahankan row locking saat save, update, nonaktifkan, dan pulihkan scale.
 
 Kriteria selesai:
 
-- [ ] Scale nonaktif tidak dapat dipilih atau disimpan sebagai nilai baru.
-- [ ] Scale nonaktif membuat nilai lama dilaporkan sebagai `invalid_scale`.
-- [ ] Pemulihan scale membuat nilai lama valid kembali tanpa mengubah alternative value.
+- [x] Scale nonaktif tidak dapat dipilih atau disimpan sebagai nilai baru.
+- [x] Scale nonaktif membuat nilai lama dilaporkan sebagai `invalid_scale`.
+- [x] Pemulihan scale membuat nilai lama valid kembali tanpa mengubah alternative value.
 
 ### 3.7 Batasi Satu Criteria `tech_features`
 
@@ -435,19 +436,18 @@ Kriteria selesai:
 
 ## 4. Urutan Implementasi Tersisa
 
-1. Implementasikan soft-delete criterion scale dan migration pada 3.6.
-2. Tambahkan singleton `tech_features` pada 3.7 dalam migration yang sama jika aman.
-3. Tambahkan guard perubahan tipe dan parent scale pada 3.8.
-4. Tambahkan focused tests untuk setiap lifecycle dan constraint.
-5. Jalankan migration verification, `bun run check`, ESLint changed files, `bun run test`, database
+1. Tambahkan singleton `tech_features` pada 3.7.
+2. Tambahkan guard perubahan tipe dan parent scale pada 3.8.
+3. Tambahkan focused tests untuk setiap lifecycle dan constraint.
+4. Jalankan migration verification, `bun run check`, ESLint changed files, `bun run test`, database
    advisors, dan `ponytail-review`.
 
 ## 5. Batas Cakupan
 
 - Tidak membuat FK `criterionScaleId` di `alternative_criterion_values`.
 - Tidak membuat matrix read-only untuk membandingkan nilai semua alternative.
-- Tidak mengubah cascade DB sekarang; hard delete criteria tetap tersedia hanya untuk data yang
-  belum digunakan.
+- Tidak mengubah cascade DB sekarang; hard delete criteria dan criterion scales tetap tersedia hanya
+  untuk data yang belum digunakan.
 - Kalkulasi, ranking, dan histori hasil MOORA dilanjutkan di
   [`moora-calculation-roadmap.md`](./moora-calculation-roadmap.md).
 

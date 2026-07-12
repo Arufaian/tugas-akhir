@@ -39,6 +39,7 @@ export async function load() {
 			value: criterionScalesTable.value
 		})
 		.from(criterionScalesTable)
+		.where(eq(criterionScalesTable.isActive, true))
 		.orderBy(asc(criterionScalesTable.orderIndex));
 
 	const values = await db

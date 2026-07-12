@@ -24,7 +24,7 @@ export async function load({ params }) {
 	if (!criterionId.success) error(404, 'Kriteria tidak ditemukan');
 
 	const [criterion] = await db
-		.select({ name: criteriaTable.name })
+		.select({ id: criteriaTable.id, name: criteriaTable.name })
 		.from(criteriaTable)
 		.where(eq(criteriaTable.id, criterionId.data))
 		.limit(1);
