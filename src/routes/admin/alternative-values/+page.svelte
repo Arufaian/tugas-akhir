@@ -5,13 +5,8 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Empty from '$lib/components/ui/empty/index.js';
 	import { Progress } from '$lib/components/ui/progress/index.js';
-	import {
-		AlertTriangle,
-		CheckCircle2,
-		ClipboardList,
-		ListChecks,
-		Motorbike
-	} from '@lucide/svelte';
+	import { OctagonAlert, ClipboardList, ListChecks, Motorbike, CircleCheck } from '@lucide/svelte';
+	import { resolve } from '$app/paths';
 
 	let { data } = $props();
 
@@ -104,7 +99,7 @@
 					<div
 						class="flex size-8 items-center justify-center rounded-md bg-success/10 text-success"
 					>
-						<CheckCircle2 class="size-4" />
+						<CircleCheck class="size-4" />
 					</div>
 					<span class="text-sm font-medium text-muted-foreground">Terisi</span>
 				</div>
@@ -136,26 +131,23 @@
 	</div>
 
 	{#if readinessIssues.length > 0}
-		<Alert.Root class="border-warning/30 bg-warning/10 text-warning">
-			<AlertTriangle />
+		<Alert.Root variant="destructive">
+			<OctagonAlert />
 			<Alert.Title>Data belum sepenuhnya siap</Alert.Title>
-			<Alert.Description class="text-warning/80">{readinessIssues.join(' ')}</Alert.Description>
-			{#if data.emptyScaleCriteria.length > 0 || data.summary.activeAlternativeCount === 0 || data.summary.activeCriteriaCount === 0 || data.needsNormalization}
-				<Alert.Action class="static mt-3 flex flex-wrap gap-2">
-					{#each data.emptyScaleCriteria as criterion (criterion.id)}
-						<Button variant="outline" size="sm" href={`/admin/criteria/${criterion.id}/scales`}>
-							Atur {criterion.code}
-						</Button>
-					{/each}
-					{#if data.summary.activeAlternativeCount === 0}
-						<Button variant="outline" size="sm" href="/admin/alternatives">Kelola Alternatif</Button
-						>
-					{/if}
-					{#if data.summary.activeCriteriaCount === 0 || data.needsNormalization}
-						<Button variant="outline" size="sm" href="/admin/criteria">Kelola Kriteria</Button>
-					{/if}
-				</Alert.Action>
-			{/if}
+			<Alert.Description class="flex flex-wrap items-center gap-x-1">
+				<span>{readinessIssues.join(' ')}</span>
+				{#each data.emptyScaleCriteria as criterion (criterion.id)}
+					<a href={resolve(`/admin/criteria/${criterion.id}/scales`)}>
+						Atur {criterion.code}
+					</a>
+				{/each}
+				{#if data.summary.activeAlternativeCount === 0}
+					<a href={resolve('/admin/alternatives')}>Kelola Alternatif</a>
+				{/if}
+				{#if data.summary.activeCriteriaCount === 0 || data.needsNormalization}
+					<a href={resolve('/admin/criteria')}>Kelola Kriteria</a>
+				{/if}
+			</Alert.Description>
 		</Alert.Root>
 	{/if}
 
