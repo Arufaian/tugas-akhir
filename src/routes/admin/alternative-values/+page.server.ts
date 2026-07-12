@@ -5,6 +5,7 @@ import {
 	criteriaTable,
 	criterionScalesTable
 } from '$lib/server/db/schema';
+import { canonicalDecimal } from '$lib/utils/decimal.js';
 import { asc, eq } from 'drizzle-orm';
 
 export async function load() {
@@ -50,9 +51,16 @@ export async function load() {
 		.from(alternativeCriterionValuesTable);
 
 	const activeAlternativeIds = new Set(alternatives.map((a) => a.id));
-	const activeCriterionIds = new Set(criteria.map((c) => c.id));
+	const criteriaById = new Map(criteria.map((criterion) => [criterion.id, criterion]));
+	const scaleValues = new Set(
+		criterionScales.map((scale) => `${scale.criterionId}:${canonicalDecimal(scale.value)}`)
+	);
 	const activeValues = values.filter(
-		(v) => activeAlternativeIds.has(v.alternativeId) && activeCriterionIds.has(v.criterionId)
+		(value) =>
+			activeAlternativeIds.has(value.alternativeId) &&
+			criteriaById.has(value.criterionId) &&
+			(criteriaById.get(value.criterionId)?.inputType !== 'scale' ||
+				scaleValues.has(`${value.criterionId}:${canonicalDecimal(value.rawValue)}`))
 	);
 	const filledCellCount = activeValues.length;
 	const totalCellCount = alternatives.length * criteria.length;

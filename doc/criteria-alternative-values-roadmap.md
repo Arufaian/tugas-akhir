@@ -79,7 +79,7 @@ Kriteria selesai:
 
 - [x] Validasi UUID route criteria memakai API Zod 4 yang konsisten dengan file lain.
 
-## 3. Tunda Sampai Alternative Values
+## 3. Alternative Values
 
 ### 3.1 Form Input Nilai Criteria per Alternative
 
@@ -321,13 +321,14 @@ Mengubah `value` atau menghapus scale yang sudah dipakai dapat membuat `rawValue
 
 Pilihan minimal:
 
-- Blok perubahan `value` dan delete jika scale sudah digunakan oleh alternative value.
-- Label dan deskripsi masih boleh diperbarui, tetapi pertimbangkan apakah histori nilai perlu mempertahankan label lama.
+- [x] Blok perubahan `value` dan delete jika scale sudah digunakan oleh alternative value.
+- [x] Label dan deskripsi tetap boleh diperbarui; `labelValue` lama dipertahankan sebagai snapshot
+      saat penilaian.
 
 Kriteria selesai:
 
-- Nilai matrix yang tersimpan selalu dapat dipetakan ke opsi scale yang masih valid.
-- Summary matrix tidak menghitung nilai scale yatim sebagai cell terisi.
+- [x] Nilai matrix yang tersimpan selalu dapat dipetakan ke opsi scale yang masih valid.
+- [x] Summary matrix tidak menghitung nilai scale yatim sebagai cell terisi.
 
 ### 3.4 Validasi Kelengkapan Decision Matrix
 
@@ -337,62 +338,22 @@ Kriteria selesai:
 
 - Ada checker yang menghasilkan alternative mana yang belum lengkap.
 - Ada checker yang menghasilkan criterion mana yang belum diisi.
-- Kalkulasi MOORA ditolak jika matrix belum lengkap.
+- Status kelengkapan dapat dipakai sebagai prasyarat modul kalkulasi.
 
-### 3.5 Service Kalkulasi MOORA
+## 4. Urutan Implementasi Tersisa
 
-Setelah data matrix lengkap, buat service kalkulasi MOORA.
+1. Tambah completeness checker pada 3.4.
+2. Tambah tests untuk completeness checker.
+3. Jalankan `bun run check`, `bunx eslint <changed files>`, dan `bun run test`.
 
-Urutan minimal:
-
-1. Ambil active alternatives.
-2. Ambil active criteria.
-3. Ambil alternative criterion values.
-4. Bentuk matrix.
-5. Normalisasi matrix.
-6. Kalikan bobot.
-7. Hitung score benefit minus cost.
-8. Simpan calculation result dan details.
-
-Kriteria selesai:
-
-- Score bisa dihitung ulang dari data saat ini.
-- `calculation_details` menyimpan raw value, normalized value, weighted value, dan contribution.
-
-## 4. Urutan Implementasi Disarankan
-
-### Sekarang
-
-1. Fix active-only normalization.
-2. Tambah `normalizedSum` ke load dan tampilkan di UI.
-3. Join/count `criterion_scales` di criteria load.
-4. Tambah badge jumlah scale di criteria table.
-5. Tambah summary scale readiness.
-6. Ganti validasi UUID delete criteria ke `z.uuid()`.
-7. Jalankan `bun run check`, `bunx eslint <changed files>`, dan `bun run test`.
-
-### Saat Alternative Values
-
-1. Tetapkan schema payload dinamis alternative criterion value.
-2. Buat form nilai per alternative berdasarkan active criteria.
-3. Implement mapping `number`, `scale`, dan checklist `tech_features`.
-4. Validasi dan simpan seluruh form dalam satu transaction.
-5. Tambahkan link isi/edit nilai dari overview.
-6. Hapus action `save` matrix lama dari overview.
-7. Tambah tests untuk mapping payload dan penyimpanan atomik.
-8. Tambah completeness checker.
-9. Tambah guard delete criteria dan scale.
-10. Implement MOORA calculation service.
-11. Tambah tests untuk completeness checker dan kalkulasi MOORA.
-
-## 5. Yang Tidak Dikerjakan Sekarang
+## 5. Batas Cakupan
 
 - Tidak membuat FK `criterionScaleId` di `alternative_criterion_values`.
-- Tidak membuat calculation service.
-- Tidak membuat guard delete berbasis alternative values.
 - Tidak membuat matrix read-only untuk membandingkan nilai semua alternative.
 - Tidak mengubah cascade DB sekarang.
+- Kalkulasi, ranking, dan histori hasil MOORA dilanjutkan di
+  [`moora-calculation-roadmap.md`](./moora-calculation-roadmap.md).
 
-Alasannya: data entry memakai form per alternative agar input number, scale, dan feature checklist
-tetap sederhana. Matrix read-only, guard delete, dan kalkulasi penuh dikerjakan saat kebutuhan
-operasionalnya sudah masuk flow utama.
+Data entry tetap memakai form per alternative agar input number, scale, dan feature checklist
+sederhana. Roadmap ini berhenti setelah integritas master data dan kelengkapan decision matrix
+terjamin.

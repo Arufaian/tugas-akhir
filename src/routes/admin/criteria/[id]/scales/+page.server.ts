@@ -14,6 +14,7 @@ import {
 	deleteCriterionScaleSchema,
 	updateCriterionScaleSchema
 } from '$lib/validations/criterion-scale.schema.js';
+import { canonicalDecimal } from '$lib/utils/decimal.js';
 
 const uuidSchema = z.uuid();
 
@@ -105,24 +106,59 @@ export const actions = {
 		}
 
 		try {
-			const [updatedScale] = await db
-				.update(criterionScalesTable)
-				.set({
-					label: form.data.label,
-					value: String(form.data.value),
-					description: form.data.description?.trim() || null,
-					updatedAt: new Date()
-				})
-				.where(
-					and(
-						eq(criterionScalesTable.id, form.data.scaleId),
-						eq(criterionScalesTable.criterionId, criterionId.data)
+			const result = await db.transaction(async (tx) => {
+				const [scale] = await tx
+					.select({
+						criterionId: criterionScalesTable.criterionId,
+						value: criterionScalesTable.value
+					})
+					.from(criterionScalesTable)
+					.where(
+						and(
+							eq(criterionScalesTable.id, form.data.scaleId),
+							eq(criterionScalesTable.criterionId, criterionId.data)
+						)
 					)
-				)
-				.returning({ id: criterionScalesTable.id });
+					.for('update')
+					.limit(1);
 
-			if (!updatedScale) {
+				if (!scale) return 'not_found';
+
+				if (canonicalDecimal(scale.value) !== canonicalDecimal(String(form.data.value))) {
+					const [existingValue] = await tx
+						.select({ id: alternativeCriterionValuesTable.id })
+						.from(alternativeCriterionValuesTable)
+						.where(
+							and(
+								eq(alternativeCriterionValuesTable.criterionId, scale.criterionId),
+								eq(alternativeCriterionValuesTable.rawValue, scale.value)
+							)
+						)
+						.limit(1);
+
+					if (existingValue) return 'used';
+				}
+
+				await tx
+					.update(criterionScalesTable)
+					.set({
+						label: form.data.label,
+						value: String(form.data.value),
+						description: form.data.description?.trim() || null,
+						updatedAt: new Date()
+					})
+					.where(eq(criterionScalesTable.id, form.data.scaleId));
+			});
+
+			if (result === 'not_found') {
 				return message(form, { type: 'error', text: 'Skala tidak ditemukan' }, { status: 404 });
+			}
+			if (result === 'used') {
+				return message(
+					form,
+					{ type: 'error', text: 'Nilai skala tidak dapat diubah karena sudah digunakan' },
+					{ status: 409 }
+				);
 			}
 		} catch (err) {
 			const dbError = err as { code?: string; cause?: { code?: string } };
@@ -130,9 +166,7 @@ export const actions = {
 			const isUniqueViolation = errorCode === '23505';
 			const messageText = isUniqueViolation
 				? `Nilai "${form.data.value}" sudah ada`
-				: err instanceof Error
-					? err.message
-					: 'Gagal memperbarui skala';
+				: 'Gagal memperbarui skala';
 			return message(
 				form,
 				{ type: 'error', text: messageText },
