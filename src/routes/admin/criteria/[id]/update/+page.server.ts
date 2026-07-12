@@ -58,9 +58,26 @@ export const actions: Actions = {
 
 			await db.update(criteriaTable).set(data).where(eq(criteriaTable.id, event.params.id));
 		} catch (error) {
-			const messageText = error instanceof Error ? error.message : 'Gagal menyimpan data';
+			const dbError = error as {
+				code?: string;
+				constraint_name?: string;
+				cause?: { code?: string; constraint_name?: string };
+			};
+			const isTechFeaturesConflict =
+				(dbError.code ?? dbError.cause?.code) === '23505' &&
+				(dbError.constraint_name ?? dbError.cause?.constraint_name) ===
+					'uq_criteria_single_tech_features';
+			const messageText = isTechFeaturesConflict
+				? 'Kriteria fitur teknologi hanya boleh ada satu'
+				: error instanceof Error
+					? error.message
+					: 'Gagal menyimpan data';
 
-			return message(form, { type: 'error', text: messageText }, { status: 500 });
+			return message(
+				form,
+				{ type: 'error', text: messageText },
+				{ status: isTechFeaturesConflict ? 409 : 500 }
+			);
 		}
 
 		return message(form, {

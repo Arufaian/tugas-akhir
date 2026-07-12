@@ -404,16 +404,16 @@ termasuk criteria nonaktif; criteria lama harus dipulihkan, bukan dibuat ulang.
 
 Pekerjaan:
 
-- [ ] Verifikasi data existing tidak memiliki lebih dari satu criteria `tech_features`.
-- [ ] Tambahkan partial unique index database untuk `input_type = 'tech_features'`.
-- [ ] Tangani unique violation `23505` pada create dan update dengan pesan yang ramah.
-- [ ] Tambahkan test create dan update, termasuk jaminan constraint database terhadap race
+- [x] Verifikasi data existing tidak memiliki lebih dari satu criteria `tech_features`.
+- [x] Tambahkan partial unique index database untuk `input_type = 'tech_features'`.
+- [x] Tangani unique violation `23505` pada create dan update dengan pesan yang ramah.
+- [x] Tambahkan test create dan update, termasuk jaminan constraint database terhadap race
       condition.
 
 Kriteria selesai:
 
-- [ ] Database tidak dapat menyimpan lebih dari satu criteria `tech_features`.
-- [ ] Admin mendapat pesan `Kriteria fitur teknologi hanya boleh ada satu` saat terjadi konflik.
+- [x] Database tidak dapat menyimpan lebih dari satu criteria `tech_features`.
+- [x] Admin mendapat pesan `Kriteria fitur teknologi hanya boleh ada satu` saat terjadi konflik.
 
 ### 3.8 Guard Integritas Tipe Input
 
@@ -436,10 +436,9 @@ Kriteria selesai:
 
 ## 4. Urutan Implementasi Tersisa
 
-1. Tambahkan singleton `tech_features` pada 3.7.
-2. Tambahkan guard perubahan tipe dan parent scale pada 3.8.
-3. Tambahkan focused tests untuk setiap lifecycle dan constraint.
-4. Jalankan migration verification, `bun run check`, ESLint changed files, `bun run test`, database
+1. Tambahkan guard perubahan tipe dan parent scale pada 3.8.
+2. Tambahkan focused tests untuk setiap lifecycle dan constraint.
+3. Jalankan migration verification, `bun run check`, ESLint changed files, `bun run test`, database
    advisors, dan `ponytail-review`.
 
 ## 5. Batas Cakupan
