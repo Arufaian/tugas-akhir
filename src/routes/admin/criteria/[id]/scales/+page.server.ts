@@ -3,7 +3,11 @@ import { z } from 'zod';
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db/index.js';
-import { criteriaTable, criterionScalesTable } from '$lib/server/db/schema/index.js';
+import {
+	alternativeCriterionValuesTable,
+	criteriaTable,
+	criterionScalesTable
+} from '$lib/server/db/schema/index.js';
 import { eq, asc, sql, and } from 'drizzle-orm';
 import {
 	createCriterionScaleSchema,
@@ -152,18 +156,49 @@ export const actions = {
 		}
 
 		try {
-			const [deletedScale] = await db
-				.delete(criterionScalesTable)
-				.where(
-					and(
-						eq(criterionScalesTable.id, form.data.scaleId),
-						eq(criterionScalesTable.criterionId, criterionId.data)
+			const result = await db.transaction(async (tx) => {
+				const [scale] = await tx
+					.select({
+						criterionId: criterionScalesTable.criterionId,
+						value: criterionScalesTable.value
+					})
+					.from(criterionScalesTable)
+					.where(
+						and(
+							eq(criterionScalesTable.id, form.data.scaleId),
+							eq(criterionScalesTable.criterionId, criterionId.data)
+						)
 					)
-				)
-				.returning({ id: criterionScalesTable.id });
+					.for('update')
+					.limit(1);
 
-			if (!deletedScale) {
+				if (!scale) return 'not_found';
+
+				const [existingValue] = await tx
+					.select({ id: alternativeCriterionValuesTable.id })
+					.from(alternativeCriterionValuesTable)
+					.where(
+						and(
+							eq(alternativeCriterionValuesTable.criterionId, scale.criterionId),
+							eq(alternativeCriterionValuesTable.rawValue, scale.value)
+						)
+					)
+					.limit(1);
+
+				if (existingValue) return 'used';
+
+				await tx.delete(criterionScalesTable).where(eq(criterionScalesTable.id, form.data.scaleId));
+			});
+
+			if (result === 'not_found') {
 				return message(form, { type: 'error', text: 'Skala tidak ditemukan' }, { status: 404 });
+			}
+			if (result === 'used') {
+				return message(
+					form,
+					{ type: 'error', text: 'Skala sudah digunakan pada nilai alternatif' },
+					{ status: 409 }
+				);
 			}
 		} catch {
 			return message(form, { type: 'error', text: 'Gagal menghapus skala' }, { status: 500 });

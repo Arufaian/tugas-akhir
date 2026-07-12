@@ -307,13 +307,13 @@ Jika scale sudah pernah dipakai sebagai `labelValue` atau raw value untuk altern
 
 Pilihan minimal:
 
-- Blok delete scale jika ada alternative value dengan criterion yang sama dan `labelValue` sama.
+- Blok delete scale jika ada alternative value dengan criterion yang sama dan `rawValue` yang sama.
 - Kalau butuh lebih kuat, tambahkan `criterionScaleId` FK di `alternative_criterion_values`.
 
 Kriteria selesai:
 
-- Scale yang sudah dipakai tidak hilang diam-diam.
-- Admin mendapat pesan kenapa scale tidak bisa dihapus.
+- [x] Scale yang sudah dipakai tidak hilang diam-diam.
+- [x] Admin mendapat pesan kenapa scale tidak bisa dihapus.
 
 ### 3.3.1 Guard Update Criterion Scale
 

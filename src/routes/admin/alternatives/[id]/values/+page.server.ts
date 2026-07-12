@@ -192,6 +192,7 @@ export const actions: Actions = {
 							})
 							.from(criterionScalesTable)
 							.where(inArray(criterionScalesTable.criterionId, criterionIds))
+							.for('key share')
 					: [];
 				const scalesByCriterionAndValue = new Map(
 					scales.map((scale) => [`${scale.criterionId}:${canonicalDecimal(scale.value)}`, scale])

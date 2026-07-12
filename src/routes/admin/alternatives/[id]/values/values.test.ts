@@ -11,7 +11,8 @@ const {
 	mockDeleteWhere,
 	mockInsert,
 	mockInsertValues,
-	mockUpsert
+	mockUpsert,
+	mockScaleLock
 } = vi.hoisted(() => ({
 	mockSelect: vi.fn(),
 	mockTransaction: vi.fn(),
@@ -20,7 +21,8 @@ const {
 	mockDeleteWhere: vi.fn(),
 	mockInsert: vi.fn(),
 	mockInsertValues: vi.fn(),
-	mockUpsert: vi.fn()
+	mockUpsert: vi.fn(),
+	mockScaleLock: vi.fn()
 }));
 
 vi.mock('$lib/server/db/index.js', () => ({
@@ -59,6 +61,11 @@ function rowsQuery(rows: unknown[], ordered = false) {
 					: { then: (resolve: (value: unknown[]) => void) => resolve(rows) }
 		})
 	};
+}
+
+function lockedRowsQuery(rows: unknown[]) {
+	mockScaleLock.mockResolvedValue(rows);
+	return { from: () => ({ where: () => ({ for: mockScaleLock }) }) };
 }
 
 function formValues(
@@ -111,7 +118,7 @@ function useTransaction(
 	txSelect
 		.mockReturnValueOnce(alternativeQuery([{ id: alternativeId }]))
 		.mockReturnValueOnce(criteriaQuery(criteria))
-		.mockReturnValueOnce(rowsQuery(scales));
+		.mockReturnValueOnce(lockedRowsQuery(scales));
 	mockTransaction.mockImplementation(async (callback) =>
 		callback({ select: txSelect, delete: mockDelete, insert: mockInsert })
 	);
@@ -196,6 +203,7 @@ describe('alternative values backend', () => {
 			})
 		]);
 		expect(mockUpsert).toHaveBeenCalledOnce();
+		expect(mockScaleLock).toHaveBeenCalledWith('key share');
 	});
 
 	it('deletes empty and unassessed values without inserting nulls', async () => {
