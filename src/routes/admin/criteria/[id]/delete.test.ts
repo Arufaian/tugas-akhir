@@ -1,17 +1,31 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { DELETE } from './+server.js';
+import { DELETE, PATCH } from './+server.js';
 
-const { mockTransaction, mockSelect, mockFor, mockDelete, mockDeleteWhere } = vi.hoisted(() => ({
+const {
+	mockTransaction,
+	mockSelect,
+	mockFor,
+	mockDelete,
+	mockDeleteWhere,
+	mockUpdate,
+	mockSet,
+	mockUpdateWhere,
+	mockReturning
+} = vi.hoisted(() => ({
 	mockTransaction: vi.fn(),
 	mockSelect: vi.fn(),
 	mockFor: vi.fn(),
 	mockDelete: vi.fn(),
-	mockDeleteWhere: vi.fn()
+	mockDeleteWhere: vi.fn(),
+	mockUpdate: vi.fn(),
+	mockSet: vi.fn(),
+	mockUpdateWhere: vi.fn(),
+	mockReturning: vi.fn()
 }));
 
 vi.mock('$lib/server/db/index.js', () => ({
-	db: { transaction: mockTransaction }
+	db: { transaction: mockTransaction, update: mockUpdate }
 }));
 
 const criterionId = '11111111-1111-4111-8111-111111111111';
@@ -29,14 +43,72 @@ function request(id = criterionId) {
 	return { params: { id } } as Parameters<typeof DELETE>[0];
 }
 
-function useTransaction(criterionRows: unknown[], valueRows: unknown[] = []) {
+function patchRequest(isActive: unknown, id = criterionId) {
+	return {
+		params: { id },
+		request: new Request('http://localhost/admin/criteria/' + id, {
+			method: 'PATCH',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ isActive })
+		})
+	} as Parameters<typeof PATCH>[0];
+}
+
+function useTransaction(
+	criterionRows: unknown[],
+	valueRows: unknown[] = [],
+	calculationRows: unknown[] = []
+) {
 	mockSelect
 		.mockReturnValueOnce(criterionQuery(criterionRows))
-		.mockReturnValueOnce(valueQuery(valueRows));
+		.mockReturnValueOnce(valueQuery(valueRows))
+		.mockReturnValueOnce(valueQuery(calculationRows));
 	mockTransaction.mockImplementation(async (callback) =>
 		callback({ select: mockSelect, delete: mockDelete })
 	);
 }
+
+describe('criterion status', () => {
+	beforeEach(() => {
+		vi.resetAllMocks();
+		mockUpdate.mockReturnValue({ set: mockSet });
+		mockSet.mockReturnValue({ where: mockUpdateWhere });
+		mockUpdateWhere.mockReturnValue({ returning: mockReturning });
+	});
+
+	it('returns 400 for an invalid UUID or status', async () => {
+		expect((await PATCH(patchRequest(true, 'invalid-id'))).status).toBe(400);
+		expect((await PATCH(patchRequest('false'))).status).toBe(400);
+		expect(mockUpdate).not.toHaveBeenCalled();
+	});
+
+	it.each([false, true])('sets isActive to %s', async (isActive) => {
+		mockReturning.mockResolvedValue([{ id: criterionId }]);
+
+		const response = await PATCH(patchRequest(isActive));
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({ success: true, isActive });
+		expect(mockSet).toHaveBeenCalledWith({ isActive, updatedAt: expect.any(Date) });
+	});
+
+	it('returns 404 when the criterion does not exist', async () => {
+		mockReturning.mockResolvedValue([]);
+
+		const response = await PATCH(patchRequest(false));
+
+		expect(response.status).toBe(404);
+	});
+
+	it('returns a generic 500 response when the database fails', async () => {
+		mockReturning.mockRejectedValue(new Error('sensitive database error'));
+
+		const response = await PATCH(patchRequest(false));
+
+		expect(response.status).toBe(500);
+		expect(await response.json()).toEqual({ message: 'Gagal mengubah status kriteria' });
+	});
+});
 
 describe('delete criterion guard', () => {
 	beforeEach(() => {
@@ -69,6 +141,18 @@ describe('delete criterion guard', () => {
 		expect(response.status).toBe(409);
 		expect(await response.json()).toEqual({
 			message: 'Kriteria sudah digunakan pada nilai alternatif'
+		});
+		expect(mockDelete).not.toHaveBeenCalled();
+	});
+
+	it('returns 409 when the criterion has calculation history', async () => {
+		useTransaction([{ id: criterionId }], [], [{ id: 'calculation-id' }]);
+
+		const response = await DELETE(request());
+
+		expect(response.status).toBe(409);
+		expect(await response.json()).toEqual({
+			message: 'Kriteria sudah digunakan pada histori perhitungan'
 		});
 		expect(mockDelete).not.toHaveBeenCalled();
 	});

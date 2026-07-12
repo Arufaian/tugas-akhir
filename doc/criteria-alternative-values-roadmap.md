@@ -347,22 +347,22 @@ Gunakan `criteria.isActive` yang sudah ada sebagai status soft-delete. Tidak per
 
 Pekerjaan:
 
-- [ ] Ubah endpoint delete criteria dari hard delete menjadi `isActive = false` dan perbarui
-      `updatedAt`.
-- [ ] Izinkan criteria yang sudah memiliki alternative values atau calculation history untuk
+- [x] Tambahkan endpoint status untuk mengubah `isActive` dan `updatedAt` tanpa menghapus row.
+- [x] Izinkan criteria yang sudah memiliki alternative values atau calculation history untuk
       dinonaktifkan tanpa menghapus data terkait.
-- [ ] Tambahkan satu action dropdown `Nonaktifkan` atau `Aktifkan` pada row criteria; tidak perlu
+- [x] Pertahankan hard delete hanya untuk criteria tanpa alternative values dan calculation history.
+- [x] Tambahkan satu action dropdown `Nonaktifkan` atau `Aktifkan` pada row criteria; tidak perlu
       tombol, dialog, atau halaman arsip baru.
-- [ ] Tampilkan toast sukses atau pesan error dari server setelah perubahan status.
-- [ ] Nonaktifkan action selama request berjalan untuk mencegah request ganda.
-- [ ] Pastikan perubahan status membuat readiness normalisasi bobot diperiksa ulang.
+- [x] Tampilkan toast sukses atau pesan error dari server setelah perubahan status.
+- [x] Nonaktifkan action selama request berjalan untuk mencegah request ganda.
+- [x] Pastikan perubahan status membuat readiness normalisasi bobot diperiksa ulang.
 
 Kriteria selesai:
 
-- [ ] Menonaktifkan criteria tidak menghapus criterion scales, alternative values, atau calculation
+- [x] Menonaktifkan criteria tidak menghapus criterion scales, alternative values, atau calculation
       details.
-- [ ] Criteria nonaktif tidak digunakan dalam form nilai, completeness checker, atau kalkulasi.
-- [ ] Criteria nonaktif dapat dipulihkan dari halaman criteria.
+- [x] Criteria nonaktif tidak digunakan dalam form nilai, completeness checker, atau kalkulasi.
+- [x] Criteria nonaktif dapat dipulihkan dari halaman criteria.
 
 ### 3.6 Soft-delete Criterion Scale
 
@@ -435,20 +435,19 @@ Kriteria selesai:
 
 ## 4. Urutan Implementasi Tersisa
 
-1. Implementasikan soft-delete criteria pada 3.5.
-2. Implementasikan soft-delete criterion scale dan migration pada 3.6.
-3. Tambahkan singleton `tech_features` pada 3.7 dalam migration yang sama jika aman.
-4. Tambahkan guard perubahan tipe dan parent scale pada 3.8.
-5. Tambahkan focused tests untuk setiap lifecycle dan constraint.
-6. Jalankan migration verification, `bun run check`, ESLint changed files, `bun run test`, database
+1. Implementasikan soft-delete criterion scale dan migration pada 3.6.
+2. Tambahkan singleton `tech_features` pada 3.7 dalam migration yang sama jika aman.
+3. Tambahkan guard perubahan tipe dan parent scale pada 3.8.
+4. Tambahkan focused tests untuk setiap lifecycle dan constraint.
+5. Jalankan migration verification, `bun run check`, ESLint changed files, `bun run test`, database
    advisors, dan `ponytail-review`.
 
 ## 5. Batas Cakupan
 
 - Tidak membuat FK `criterionScaleId` di `alternative_criterion_values`.
 - Tidak membuat matrix read-only untuk membandingkan nilai semua alternative.
-- Tidak mengubah cascade DB sekarang; aplikasi berhenti memakai hard delete untuk criteria dan
-  criterion scales.
+- Tidak mengubah cascade DB sekarang; hard delete criteria tetap tersedia hanya untuk data yang
+  belum digunakan.
 - Kalkulasi, ranking, dan histori hasil MOORA dilanjutkan di
   [`moora-calculation-roadmap.md`](./moora-calculation-roadmap.md).
 
