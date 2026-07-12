@@ -22,25 +22,6 @@
 			? [`${data.emptyScaleCriteria.length} kriteria skala belum punya opsi.`]
 			: [])
 	]);
-
-	const alternativeProgress = $derived.by(() => {
-		const filledCountByAlternativeId: Record<string, number> = {};
-
-		for (const value of data.values) {
-			filledCountByAlternativeId[value.alternativeId] =
-				(filledCountByAlternativeId[value.alternativeId] ?? 0) + 1;
-		}
-
-		return data.alternatives.map((alternative) => {
-			const filledCount = filledCountByAlternativeId[alternative.id] ?? 0;
-
-			return {
-				...alternative,
-				filledCount,
-				isComplete: data.criteria.length > 0 && filledCount === data.criteria.length
-			};
-		});
-	});
 </script>
 
 <svelte:head>
@@ -172,7 +153,7 @@
 				</Card.Description>
 			</Card.Header>
 			<Card.Content class="flex flex-col gap-3">
-				{#each alternativeProgress as alternative (alternative.id)}
+				{#each data.completeness.alternatives as alternative (alternative.id)}
 					<Card.Root size="sm" class="mb-4 last:mb-0">
 						<Card.Header class="gap-1">
 							<Card.Title class="text-base">{alternative.code}</Card.Title>
@@ -191,6 +172,18 @@
 								</span>
 							</div>
 							<Progress value={alternative.filledCount} max={data.criteria.length} />
+							{#if alternative.missingCriteria.length > 0}
+								<p class="text-xs text-muted-foreground">
+									Belum:
+									{alternative.missingCriteria
+										.map((criterion) =>
+											criterion.reason === 'invalid_scale'
+												? `${criterion.code} (skala tidak valid)`
+												: criterion.code
+										)
+										.join(', ')}
+								</p>
+							{/if}
 						</Card.Content>
 						<Card.Footer class="justify-end">
 							<Button

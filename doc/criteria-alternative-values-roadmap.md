@@ -336,21 +336,119 @@ Sebelum kalkulasi MOORA, sistem perlu memastikan semua alternative aktif punya v
 
 Kriteria selesai:
 
-- Ada checker yang menghasilkan alternative mana yang belum lengkap.
-- Ada checker yang menghasilkan criterion mana yang belum diisi.
-- Status kelengkapan dapat dipakai sebagai prasyarat modul kalkulasi.
+- [x] Ada checker yang menghasilkan alternative mana yang belum lengkap.
+- [x] Ada checker yang menghasilkan criterion mana yang belum diisi.
+- [x] Status kelengkapan dapat dipakai sebagai prasyarat modul kalkulasi.
+
+### 3.5 Soft-delete Criteria
+
+Gunakan `criteria.isActive` yang sudah ada sebagai status soft-delete. Tidak perlu menambah
+`deletedAt` selama timestamp penghapusan dan purge permanen belum dibutuhkan.
+
+Pekerjaan:
+
+- [ ] Ubah endpoint delete criteria dari hard delete menjadi `isActive = false` dan perbarui
+      `updatedAt`.
+- [ ] Izinkan criteria yang sudah memiliki alternative values atau calculation history untuk
+      dinonaktifkan tanpa menghapus data terkait.
+- [ ] Tambahkan satu action dropdown `Nonaktifkan` atau `Aktifkan` pada row criteria; tidak perlu
+      tombol, dialog, atau halaman arsip baru.
+- [ ] Tampilkan toast sukses atau pesan error dari server setelah perubahan status.
+- [ ] Nonaktifkan action selama request berjalan untuk mencegah request ganda.
+- [ ] Pastikan perubahan status membuat readiness normalisasi bobot diperiksa ulang.
+
+Kriteria selesai:
+
+- [ ] Menonaktifkan criteria tidak menghapus criterion scales, alternative values, atau calculation
+      details.
+- [ ] Criteria nonaktif tidak digunakan dalam form nilai, completeness checker, atau kalkulasi.
+- [ ] Criteria nonaktif dapat dipulihkan dari halaman criteria.
+
+### 3.6 Soft-delete Criterion Scale
+
+Tambahkan `criterion_scales.isActive`. Semua row tetap disimpan agar scale dapat dipulihkan dan nilai
+lama tetap memiliki pasangan master data.
+
+Keputusan minimal:
+
+- Constraint unique `(criterionId, value)` tetap berlaku terhadap scale aktif dan nonaktif.
+- Menonaktifkan scale yang sudah dipakai diperbolehkan.
+- Alternative value yang memakai scale nonaktif tetap tersimpan, tetapi dianggap `invalid_scale`
+  sampai dinilai ulang atau scale dipulihkan.
+- Tidak menambah `criterionScaleId`, tabel histori, atau `deletedAt` pada tahap ini.
+
+Pekerjaan:
+
+- [ ] Tambahkan kolom `is_active boolean not null default true` melalui schema dan migration.
+- [ ] Ubah delete scale menjadi update `isActive = false` dan `updatedAt`.
+- [ ] Tambahkan `Switch` pada setiap row scale untuk menonaktifkan atau mengaktifkan kembali scale.
+- [ ] Tampilkan scale aktif dan nonaktif pada halaman pengelolaan beserta statusnya.
+- [ ] Tampilkan toast sukses atau pesan error dari server setelah perubahan status.
+- [ ] Nonaktifkan `Switch` selama request berjalan dan pulihkan posisi sebelumnya jika request
+      gagal.
+- [ ] Filter hanya scale aktif pada form nilai, validasi save, summary kesiapan scale, dan
+      completeness checker.
+- [ ] Pertahankan row locking saat save, update, nonaktifkan, dan pulihkan scale.
+
+Kriteria selesai:
+
+- [ ] Scale nonaktif tidak dapat dipilih atau disimpan sebagai nilai baru.
+- [ ] Scale nonaktif membuat nilai lama dilaporkan sebagai `invalid_scale`.
+- [ ] Pemulihan scale membuat nilai lama valid kembali tanpa mengubah alternative value.
+
+### 3.7 Batasi Satu Criteria `tech_features`
+
+Sistem hanya memiliki satu konsep penilaian fitur teknologi. Batas berlaku terhadap seluruh row,
+termasuk criteria nonaktif; criteria lama harus dipulihkan, bukan dibuat ulang.
+
+Pekerjaan:
+
+- [ ] Verifikasi data existing tidak memiliki lebih dari satu criteria `tech_features`.
+- [ ] Tambahkan partial unique index database untuk `input_type = 'tech_features'`.
+- [ ] Tangani unique violation `23505` pada create dan update dengan pesan yang ramah.
+- [ ] Tambahkan test create dan update, termasuk jaminan constraint database terhadap race
+      condition.
+
+Kriteria selesai:
+
+- [ ] Database tidak dapat menyimpan lebih dari satu criteria `tech_features`.
+- [ ] Admin mendapat pesan `Kriteria fitur teknologi hanya boleh ada satu` saat terjadi konflik.
+
+### 3.8 Guard Integritas Tipe Input
+
+Perubahan `inputType` dan direct request ke halaman scale dapat meninggalkan data yang tidak sesuai
+dengan tipe criteria.
+
+Pekerjaan:
+
+- [ ] Blok perubahan `inputType` jika criteria sudah memiliki alternative values.
+- [ ] Blok perubahan dari `scale` ke tipe lain selama masih memiliki scale aktif.
+- [ ] Pastikan load dan action create/update/nonaktifkan/pulihkan scale hanya menerima parent
+      criteria dengan `inputType = 'scale'`.
+- [ ] Return status dan pesan yang jelas untuk konflik data atau parent criteria yang salah.
+
+Kriteria selesai:
+
+- [ ] Alternative values tidak ditafsirkan ulang akibat perubahan tipe input.
+- [ ] Scale aktif tidak menjadi data tersembunyi pada criteria non-scale.
+- [ ] Direct request tidak dapat memutasi scale milik criteria non-scale.
 
 ## 4. Urutan Implementasi Tersisa
 
-1. Tambah completeness checker pada 3.4.
-2. Tambah tests untuk completeness checker.
-3. Jalankan `bun run check`, `bunx eslint <changed files>`, dan `bun run test`.
+1. Implementasikan soft-delete criteria pada 3.5.
+2. Implementasikan soft-delete criterion scale dan migration pada 3.6.
+3. Tambahkan singleton `tech_features` pada 3.7 dalam migration yang sama jika aman.
+4. Tambahkan guard perubahan tipe dan parent scale pada 3.8.
+5. Tambahkan focused tests untuk setiap lifecycle dan constraint.
+6. Jalankan migration verification, `bun run check`, ESLint changed files, `bun run test`, database
+   advisors, dan `ponytail-review`.
 
 ## 5. Batas Cakupan
 
 - Tidak membuat FK `criterionScaleId` di `alternative_criterion_values`.
 - Tidak membuat matrix read-only untuk membandingkan nilai semua alternative.
-- Tidak mengubah cascade DB sekarang.
+- Tidak mengubah cascade DB sekarang; aplikasi berhenti memakai hard delete untuk criteria dan
+  criterion scales.
 - Kalkulasi, ranking, dan histori hasil MOORA dilanjutkan di
   [`moora-calculation-roadmap.md`](./moora-calculation-roadmap.md).
 

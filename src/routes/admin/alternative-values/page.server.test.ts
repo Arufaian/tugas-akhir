@@ -50,8 +50,11 @@ describe('alternative values overview scale readiness', () => {
 
 		const result = await load();
 
-		expect(result.values).toEqual([]);
 		expect(result.summary.filledCellCount).toBe(0);
+		expect(result.completeness.alternatives[0].missingCriteria[0]).toMatchObject({
+			code: 'C1',
+			reason: 'invalid_scale'
+		});
 	});
 
 	it('counts a scale value that still matches an option', async () => {
@@ -59,7 +62,7 @@ describe('alternative values overview scale readiness', () => {
 
 		const result = await load();
 
-		expect(result.values).toHaveLength(1);
 		expect(result.summary.filledCellCount).toBe(1);
+		expect(result.completeness.isComplete).toBe(true);
 	});
 });

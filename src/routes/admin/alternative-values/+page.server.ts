@@ -5,7 +5,7 @@ import {
 	criteriaTable,
 	criterionScalesTable
 } from '$lib/server/db/schema';
-import { canonicalDecimal } from '$lib/utils/decimal.js';
+import { checkDecisionMatrixCompleteness } from '$lib/server/services/decision-matrix.js';
 import { asc, eq } from 'drizzle-orm';
 
 export async function load() {
@@ -50,20 +50,12 @@ export async function load() {
 		})
 		.from(alternativeCriterionValuesTable);
 
-	const activeAlternativeIds = new Set(alternatives.map((a) => a.id));
-	const criteriaById = new Map(criteria.map((criterion) => [criterion.id, criterion]));
-	const scaleValues = new Set(
-		criterionScales.map((scale) => `${scale.criterionId}:${canonicalDecimal(scale.value)}`)
-	);
-	const activeValues = values.filter(
-		(value) =>
-			activeAlternativeIds.has(value.alternativeId) &&
-			criteriaById.has(value.criterionId) &&
-			(criteriaById.get(value.criterionId)?.inputType !== 'scale' ||
-				scaleValues.has(`${value.criterionId}:${canonicalDecimal(value.rawValue)}`))
-	);
-	const filledCellCount = activeValues.length;
-	const totalCellCount = alternatives.length * criteria.length;
+	const completeness = checkDecisionMatrixCompleteness({
+		alternatives,
+		criteria,
+		values,
+		scales: criterionScales
+	});
 	const scaleCriterionIds = new Set(criterionScales.map((s) => s.criterionId));
 	const emptyScaleCriteria = criteria.filter(
 		(c) => c.inputType === 'scale' && !scaleCriterionIds.has(c.id)
@@ -80,16 +72,16 @@ export async function load() {
 		alternatives,
 		criteria,
 		criterionScales,
-		values: activeValues,
+		completeness,
 		emptyScaleCriteria,
 		normalizedSum,
 		needsNormalization,
 		summary: {
 			activeAlternativeCount: alternatives.length,
 			activeCriteriaCount: criteria.length,
-			totalCellCount,
-			filledCellCount,
-			emptyCellCount: totalCellCount - filledCellCount
+			totalCellCount: completeness.totalCellCount,
+			filledCellCount: completeness.filledCellCount,
+			emptyCellCount: completeness.emptyCellCount
 		}
 	};
 }
