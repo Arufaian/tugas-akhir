@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
-export const alternativeCriterionValuesSchema = z.object({
+export const alternativeCriterionValuesSchema = z.strictObject({
 	values: z.array(
-		z.object({
+		z.strictObject({
 			criterionId: z.uuid(),
 			value: z.string(),
 			selectedFeatureIds: z.array(z.string()),
@@ -10,6 +10,3 @@ export const alternativeCriterionValuesSchema = z.object({
 		})
 	)
 });
-
-export type AlternativeCriterionValuesInput = z.infer<typeof alternativeCriterionValuesSchema>;
-export type AlternativeCriterionValuesSchema = typeof alternativeCriterionValuesSchema;

@@ -268,24 +268,24 @@ Penyimpanan:
 UI/UX:
 
 - [x] Ubah `/admin/alternative-values` dari matrix input menjadi overview progres.
-- [ ] Buat form `/admin/alternatives/[id]/values` berdasarkan active criteria.
-- [ ] Tambahkan label aksesibel dan satuan untuk input angka jika tersedia.
-- [ ] Tambahkan checklist `tech_features` dan kontrol `isAssessed`.
-- [ ] Tambahkan link isi/edit nilai dari overview ke `/admin/alternatives/[id]/values`.
-- [ ] Tambahkan status submit, toast hasil, dan invalidasi data setelah penyimpanan.
+- [x] Buat form `/admin/alternatives/[id]/values` berdasarkan active criteria.
+- [x] Tambahkan label aksesibel dan satuan untuk input angka jika tersedia.
+- [x] Tambahkan checklist `tech_features` dan kontrol `isAssessed`.
+- [x] Tambahkan link isi/edit nilai dari overview ke `/admin/alternatives/[id]/values`.
+- [x] Tambahkan status submit, toast hasil, dan invalidasi data setelah penyimpanan.
 
 Backend:
 
-- [ ] Validasi setiap input terhadap batas `numeric(14,4)`: non-negatif, maksimal 10 digit
+- [x] Validasi setiap input terhadap batas `numeric(14,4)`: non-negatif, maksimal 10 digit
       sebelum desimal, dan maksimal 4 digit desimal.
-- [ ] Validasi alternative, criteria, dan seluruh payload form secara ketat di server.
-- [ ] Jalankan delete dan upsert dalam satu transaction agar save gagal secara atomik.
-- [ ] Filter nilai dan scale di query load ke alternative dan criteria aktif yang dipakai form.
+- [x] Validasi alternative, criteria, dan seluruh payload form secara ketat di server.
+- [x] Jalankan delete dan upsert dalam satu transaction agar save gagal secara atomik.
+- [x] Filter nilai dan scale di query load ke alternative dan criteria aktif yang dipakai form.
 - [x] Tetapkan daftar 10 fitur teknologi tetap dengan total skor maksimum 100.
 - [x] Tambahkan constant dan validasi perhitungan skor fitur.
 - [x] Hapus nilai `tech_features` di atas 100 yang tidak dapat dipetakan kembali ke fitur asal.
-- [ ] Validasi ID fitur dan hitung skor di action server.
-- [ ] Hapus action `save` matrix lama dari `/admin/alternative-values`.
+- [x] Validasi ID fitur dan hitung skor di action server.
+- [x] Hapus action `save` matrix lama dari `/admin/alternative-values`.
 
 ### 3.2 Guard Delete Criteria
 

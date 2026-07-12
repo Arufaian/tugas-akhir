@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { AlertTriangle } from '@lucide/svelte';
 	import { superForm } from 'sveltekit-superforms';
@@ -31,7 +32,10 @@
 		resetForm: false,
 		invalidateAll: 'pessimistic',
 		onUpdated({ form: updatedForm }) {
-			if (updatedForm.message?.type === 'success') toast.success(updatedForm.message.text);
+			if (updatedForm.message?.type === 'success') {
+				toast.success(updatedForm.message.text);
+				setTimeout(() => goto(resolve('/admin/alternative-values')), 1500);
+			}
 			if (updatedForm.message?.type === 'error') toast.error(updatedForm.message.text);
 		}
 	});
