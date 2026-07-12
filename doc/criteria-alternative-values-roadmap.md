@@ -298,8 +298,8 @@ Pilihan minimal:
 
 Kriteria selesai:
 
-- Criteria kosong tetap bisa dihapus.
-- Criteria yang sudah dipakai tidak terhapus tanpa sengaja.
+- [x] Criteria kosong tetap bisa dihapus.
+- [x] Criteria yang sudah dipakai tidak terhapus tanpa sengaja.
 
 ### 3.3 Guard Delete Criterion Scale
 
