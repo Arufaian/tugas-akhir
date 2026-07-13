@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "uq_criteria_single_tech_features" ON "criteria" USING btree ("input_type") WHERE "criteria"."input_type" = 'tech_features';

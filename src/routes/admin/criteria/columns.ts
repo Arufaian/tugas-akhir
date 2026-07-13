@@ -151,6 +151,7 @@ export const columns: ColumnDef<CriterionRow>[] = [
 				id: row.original.id,
 				name: row.original.name,
 				inputType: row.original.inputType,
+				isActive: row.original.isActive,
 				showScaleWarning: row.original.inputType === 'scale' && row.original.scaleCount === 0
 			});
 		},

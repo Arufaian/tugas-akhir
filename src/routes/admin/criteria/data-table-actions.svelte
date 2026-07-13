@@ -3,6 +3,7 @@
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import RulerIcon from '@lucide/svelte/icons/ruler';
+	import PowerIcon from '@lucide/svelte/icons/power';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import ConfirmDeleteDialog from '$lib/components/confirm-delete-dialog.svelte';
@@ -14,16 +15,45 @@
 		id,
 		name,
 		inputType,
+		isActive,
 		showScaleWarning = false
 	}: {
 		id: string;
 		name: string;
 		inputType: string;
+		isActive: boolean;
 		showScaleWarning?: boolean;
 	} = $props();
 
 	let showDialog = $state(false);
 	let isDeleting = $state(false);
+	let isUpdatingStatus = $state(false);
+
+	async function handleStatusChange() {
+		isUpdatingStatus = true;
+		const nextStatus = !isActive;
+
+		try {
+			const res = await fetch(`/admin/criteria/${id}`, {
+				method: 'PATCH',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ isActive: nextStatus })
+			});
+			if (!res.ok) {
+				const data = await res.json().catch(() => ({}));
+				throw new Error(data.message || 'Gagal mengubah status kriteria');
+			}
+
+			toast.success(
+				nextStatus ? 'Kriteria berhasil diaktifkan' : 'Kriteria berhasil dinonaktifkan'
+			);
+			await invalidateAll();
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Terjadi kesalahan');
+		} finally {
+			isUpdatingStatus = false;
+		}
+	}
 
 	async function handleDelete() {
 		isDeleting = true;
@@ -80,8 +110,16 @@
 					{/if}
 				</DropdownMenu.Item>
 			{/if}
+			<DropdownMenu.Item disabled={isUpdatingStatus} onclick={handleStatusChange}>
+				<PowerIcon />
+				{isActive ? 'Nonaktifkan' : 'Aktifkan'}
+			</DropdownMenu.Item>
 			<DropdownMenu.Separator />
-			<DropdownMenu.Item variant="destructive" onclick={() => (showDialog = true)}>
+			<DropdownMenu.Item
+				variant="destructive"
+				disabled={isUpdatingStatus}
+				onclick={() => (showDialog = true)}
+			>
 				<Trash2Icon />
 				Delete
 			</DropdownMenu.Item>

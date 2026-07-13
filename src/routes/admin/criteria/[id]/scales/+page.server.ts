@@ -3,15 +3,24 @@ import { z } from 'zod';
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db/index.js';
-import { criteriaTable, criterionScalesTable } from '$lib/server/db/schema/index.js';
+import {
+	alternativeCriterionValuesTable,
+	criteriaTable,
+	criterionScalesTable
+} from '$lib/server/db/schema/index.js';
 import { eq, asc, sql, and } from 'drizzle-orm';
 import {
 	createCriterionScaleSchema,
 	deleteCriterionScaleSchema,
 	updateCriterionScaleSchema
 } from '$lib/validations/criterion-scale.schema.js';
+import { canonicalDecimal } from '$lib/utils/decimal.js';
 
 const uuidSchema = z.uuid();
+const statusSchema = z.object({
+	scaleId: z.uuid(),
+	isActive: z.enum(['true', 'false']).transform((value) => value === 'true')
+});
 
 export async function load({ params }) {
 	const criterionId = uuidSchema.safeParse(params.id);
@@ -19,12 +28,15 @@ export async function load({ params }) {
 	if (!criterionId.success) error(404, 'Kriteria tidak ditemukan');
 
 	const [criterion] = await db
-		.select({ name: criteriaTable.name })
+		.select({ id: criteriaTable.id, name: criteriaTable.name, inputType: criteriaTable.inputType })
 		.from(criteriaTable)
 		.where(eq(criteriaTable.id, criterionId.data))
 		.limit(1);
 
 	if (!criterion) error(404, 'Kriteria tidak ditemukan');
+	if (criterion.inputType !== 'scale') {
+		error(409, 'Skala hanya dapat dikelola untuk kriteria bertipe skala');
+	}
 
 	const scales = await db
 		.select()
@@ -55,20 +67,43 @@ export const actions = {
 		}
 
 		try {
-			const [nextOrder] = await db
-				.select({
-					max: sql<number>`COALESCE(MAX(${criterionScalesTable.orderIndex}), 0) + 1`
-				})
-				.from(criterionScalesTable)
-				.where(eq(criterionScalesTable.criterionId, criterionId.data));
+			const result = await db.transaction(async (tx) => {
+				const [criterion] = await tx
+					.select({ inputType: criteriaTable.inputType })
+					.from(criteriaTable)
+					.where(eq(criteriaTable.id, criterionId.data))
+					.for('update')
+					.limit(1);
 
-			await db.insert(criterionScalesTable).values({
-				criterionId: criterionId.data,
-				label: form.data.label,
-				value: String(form.data.value),
-				description: form.data.description?.trim() || null,
-				orderIndex: nextOrder.max
+				if (!criterion) return 'criterion_not_found';
+				if (criterion.inputType !== 'scale') return 'invalid_parent';
+
+				const [nextOrder] = await tx
+					.select({
+						max: sql<number>`COALESCE(MAX(${criterionScalesTable.orderIndex}), 0) + 1`
+					})
+					.from(criterionScalesTable)
+					.where(eq(criterionScalesTable.criterionId, criterionId.data));
+
+				await tx.insert(criterionScalesTable).values({
+					criterionId: criterionId.data,
+					label: form.data.label,
+					value: String(form.data.value),
+					description: form.data.description?.trim() || null,
+					orderIndex: nextOrder.max
+				});
 			});
+
+			if (result === 'criterion_not_found') {
+				return message(form, { type: 'error', text: 'Kriteria tidak ditemukan' }, { status: 404 });
+			}
+			if (result === 'invalid_parent') {
+				return message(
+					form,
+					{ type: 'error', text: 'Skala hanya dapat dikelola untuk kriteria bertipe skala' },
+					{ status: 409 }
+				);
+			}
 		} catch (err) {
 			const dbError = err as { code?: string; cause?: { code?: string } };
 			const errorCode = dbError.code ?? dbError.cause?.code;
@@ -101,24 +136,79 @@ export const actions = {
 		}
 
 		try {
-			const [updatedScale] = await db
-				.update(criterionScalesTable)
-				.set({
-					label: form.data.label,
-					value: String(form.data.value),
-					description: form.data.description?.trim() || null,
-					updatedAt: new Date()
-				})
-				.where(
-					and(
-						eq(criterionScalesTable.id, form.data.scaleId),
-						eq(criterionScalesTable.criterionId, criterionId.data)
-					)
-				)
-				.returning({ id: criterionScalesTable.id });
+			const result = await db.transaction(async (tx) => {
+				const [criterion] = await tx
+					.select({ inputType: criteriaTable.inputType })
+					.from(criteriaTable)
+					.where(eq(criteriaTable.id, criterionId.data))
+					.for('update')
+					.limit(1);
 
-			if (!updatedScale) {
+				if (!criterion) return 'criterion_not_found';
+				if (criterion.inputType !== 'scale') return 'invalid_parent';
+
+				const [scale] = await tx
+					.select({
+						criterionId: criterionScalesTable.criterionId,
+						value: criterionScalesTable.value
+					})
+					.from(criterionScalesTable)
+					.where(
+						and(
+							eq(criterionScalesTable.id, form.data.scaleId),
+							eq(criterionScalesTable.criterionId, criterionId.data)
+						)
+					)
+					.for('update')
+					.limit(1);
+
+				if (!scale) return 'not_found';
+
+				if (canonicalDecimal(scale.value) !== canonicalDecimal(String(form.data.value))) {
+					const [existingValue] = await tx
+						.select({ id: alternativeCriterionValuesTable.id })
+						.from(alternativeCriterionValuesTable)
+						.where(
+							and(
+								eq(alternativeCriterionValuesTable.criterionId, scale.criterionId),
+								eq(alternativeCriterionValuesTable.rawValue, scale.value)
+							)
+						)
+						.limit(1);
+
+					if (existingValue) return 'used';
+				}
+
+				await tx
+					.update(criterionScalesTable)
+					.set({
+						label: form.data.label,
+						value: String(form.data.value),
+						description: form.data.description?.trim() || null,
+						updatedAt: new Date()
+					})
+					.where(eq(criterionScalesTable.id, form.data.scaleId));
+			});
+
+			if (result === 'criterion_not_found') {
+				return message(form, { type: 'error', text: 'Kriteria tidak ditemukan' }, { status: 404 });
+			}
+			if (result === 'not_found') {
 				return message(form, { type: 'error', text: 'Skala tidak ditemukan' }, { status: 404 });
+			}
+			if (result === 'invalid_parent') {
+				return message(
+					form,
+					{ type: 'error', text: 'Skala hanya dapat dikelola untuk kriteria bertipe skala' },
+					{ status: 409 }
+				);
+			}
+			if (result === 'used') {
+				return message(
+					form,
+					{ type: 'error', text: 'Nilai skala tidak dapat diubah karena sudah digunakan' },
+					{ status: 409 }
+				);
 			}
 		} catch (err) {
 			const dbError = err as { code?: string; cause?: { code?: string } };
@@ -126,9 +216,7 @@ export const actions = {
 			const isUniqueViolation = errorCode === '23505';
 			const messageText = isUniqueViolation
 				? `Nilai "${form.data.value}" sudah ada`
-				: err instanceof Error
-					? err.message
-					: 'Gagal memperbarui skala';
+				: 'Gagal memperbarui skala';
 			return message(
 				form,
 				{ type: 'error', text: messageText },
@@ -137,6 +225,63 @@ export const actions = {
 		}
 
 		return message(form, { type: 'success', text: 'Skala berhasil diperbarui' });
+	},
+	status: async ({ params, request }) => {
+		const criterionId = uuidSchema.safeParse(params.id);
+		const status = statusSchema.safeParse(Object.fromEntries(await request.formData()));
+
+		if (!criterionId.success || !status.success) {
+			return fail(400, { message: 'Status skala tidak valid' });
+		}
+
+		try {
+			const result = await db.transaction(async (tx) => {
+				const [criterion] = await tx
+					.select({ inputType: criteriaTable.inputType })
+					.from(criteriaTable)
+					.where(eq(criteriaTable.id, criterionId.data))
+					.for('update')
+					.limit(1);
+
+				if (!criterion) return 'criterion_not_found';
+				if (criterion.inputType !== 'scale') return 'invalid_parent';
+
+				const [scale] = await tx
+					.select({ id: criterionScalesTable.id })
+					.from(criterionScalesTable)
+					.where(
+						and(
+							eq(criterionScalesTable.id, status.data.scaleId),
+							eq(criterionScalesTable.criterionId, criterionId.data)
+						)
+					)
+					.for('update')
+					.limit(1);
+
+				if (!scale) return 'not_found';
+
+				await tx
+					.update(criterionScalesTable)
+					.set({ isActive: status.data.isActive, updatedAt: new Date() })
+					.where(eq(criterionScalesTable.id, scale.id));
+
+				return 'updated';
+			});
+
+			if (result === 'criterion_not_found') {
+				return fail(404, { message: 'Kriteria tidak ditemukan' });
+			}
+			if (result === 'not_found') return fail(404, { message: 'Skala tidak ditemukan' });
+			if (result === 'invalid_parent') {
+				return fail(409, {
+					message: 'Skala hanya dapat dikelola untuk kriteria bertipe skala'
+				});
+			}
+
+			return { success: true, isActive: status.data.isActive };
+		} catch {
+			return fail(500, { message: 'Gagal mengubah status skala' });
+		}
 	},
 	delete: async (event) => {
 		const form = await superValidate(event, zod4(deleteCriterionScaleSchema));
@@ -152,18 +297,69 @@ export const actions = {
 		}
 
 		try {
-			const [deletedScale] = await db
-				.delete(criterionScalesTable)
-				.where(
-					and(
-						eq(criterionScalesTable.id, form.data.scaleId),
-						eq(criterionScalesTable.criterionId, criterionId.data)
-					)
-				)
-				.returning({ id: criterionScalesTable.id });
+			const result = await db.transaction(async (tx) => {
+				const [criterion] = await tx
+					.select({ inputType: criteriaTable.inputType })
+					.from(criteriaTable)
+					.where(eq(criteriaTable.id, criterionId.data))
+					.for('update')
+					.limit(1);
 
-			if (!deletedScale) {
+				if (!criterion) return 'criterion_not_found';
+				if (criterion.inputType !== 'scale') return 'invalid_parent';
+
+				const [scale] = await tx
+					.select({
+						criterionId: criterionScalesTable.criterionId,
+						value: criterionScalesTable.value
+					})
+					.from(criterionScalesTable)
+					.where(
+						and(
+							eq(criterionScalesTable.id, form.data.scaleId),
+							eq(criterionScalesTable.criterionId, criterionId.data)
+						)
+					)
+					.for('update')
+					.limit(1);
+
+				if (!scale) return 'not_found';
+
+				const [existingValue] = await tx
+					.select({ id: alternativeCriterionValuesTable.id })
+					.from(alternativeCriterionValuesTable)
+					.where(
+						and(
+							eq(alternativeCriterionValuesTable.criterionId, scale.criterionId),
+							eq(alternativeCriterionValuesTable.rawValue, scale.value)
+						)
+					)
+					.limit(1);
+
+				if (existingValue) return 'used';
+
+				await tx.delete(criterionScalesTable).where(eq(criterionScalesTable.id, form.data.scaleId));
+			});
+
+			if (result === 'criterion_not_found') {
+				return message(form, { type: 'error', text: 'Kriteria tidak ditemukan' }, { status: 404 });
+			}
+			if (result === 'not_found') {
 				return message(form, { type: 'error', text: 'Skala tidak ditemukan' }, { status: 404 });
+			}
+			if (result === 'invalid_parent') {
+				return message(
+					form,
+					{ type: 'error', text: 'Skala hanya dapat dikelola untuk kriteria bertipe skala' },
+					{ status: 409 }
+				);
+			}
+			if (result === 'used') {
+				return message(
+					form,
+					{ type: 'error', text: 'Skala sudah digunakan pada nilai alternatif' },
+					{ status: 409 }
+				);
 			}
 		} catch {
 			return message(form, { type: 'error', text: 'Gagal menghapus skala' }, { status: 500 });

@@ -1,0 +1,1 @@
+ALTER TABLE "criterion_scales" ADD COLUMN "is_active" boolean DEFAULT true NOT NULL;

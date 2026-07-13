@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { actions } from './+page.server.js';
 
+interface ActionResult {
+	status?: number;
+	data?: { form: { message?: { type: string; text: string } } };
+}
+
 const { mockFrom, mockInsertValues } = vi.hoisted(() => ({
 	mockFrom: vi.fn(),
 	mockInsertValues: vi.fn()
@@ -48,5 +53,23 @@ describe('create criterion code generation', () => {
 		mockFrom.mockResolvedValue([{ maxCodeNum: 9, maxOrder: 9 }]);
 		await actions.default(post());
 		expect(mockInsertValues).toHaveBeenCalledWith(expect.objectContaining({ code: 'C10' }));
+	});
+
+	it('returns 409 when a tech features criterion already exists', async () => {
+		mockFrom.mockResolvedValue([{ maxCodeNum: 1, maxOrder: 1 }]);
+		mockInsertValues.mockRejectedValue(
+			Object.assign(new Error('duplicate key'), {
+				code: '23505',
+				constraint_name: 'uq_criteria_single_tech_features'
+			})
+		);
+
+		const result = (await actions.default(post({ inputType: 'tech_features' }))) as ActionResult;
+
+		expect(result.status).toBe(409);
+		expect(result.data?.form.message).toEqual({
+			type: 'error',
+			text: 'Kriteria fitur teknologi hanya boleh ada satu'
+		});
 	});
 });
