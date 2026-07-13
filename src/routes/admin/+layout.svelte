@@ -15,7 +15,8 @@
 		create: 'Tambah',
 		update: 'Edit',
 		scales: 'Nilai kriteria skala',
-		'alternative-values': 'Nilai alternatif'
+		'alternative-values': 'Nilai alternatif',
+		'moora-calculation': 'Perhitungan MOORA'
 	};
 
 	const breadcrumbs = $derived.by(() => {
