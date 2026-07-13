@@ -1,3 +1,4 @@
+import { fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import {
 	alternativeCriterionValuesTable,
@@ -7,6 +8,11 @@ import {
 } from '$lib/server/db/schema';
 import { checkDecisionMatrixCompleteness } from '$lib/server/services/decision-matrix.js';
 import { asc, eq } from 'drizzle-orm';
+import { z } from 'zod';
+
+import type { Actions } from './$types.js';
+
+const uuidSchema = z.uuid();
 
 export async function load() {
 	const alternatives = await db
@@ -86,3 +92,32 @@ export async function load() {
 		}
 	};
 }
+
+export const actions: Actions = {
+	clear: async ({ request }) => {
+		const formData = await request.formData();
+		const alternativeId = uuidSchema.safeParse(formData.get('alternativeId'));
+
+		if (!alternativeId.success) {
+			return fail(400, { message: 'Alternatif tidak valid' });
+		}
+
+		try {
+			const [alternative] = await db
+				.select({ id: alternativesTable.id })
+				.from(alternativesTable)
+				.where(eq(alternativesTable.id, alternativeId.data))
+				.limit(1);
+
+			if (!alternative) return fail(404, { message: 'Alternatif tidak ditemukan' });
+
+			await db
+				.delete(alternativeCriterionValuesTable)
+				.where(eq(alternativeCriterionValuesTable.alternativeId, alternativeId.data));
+		} catch {
+			return fail(500, { message: 'Gagal membersihkan nilai alternatif' });
+		}
+
+		return { message: 'Nilai alternatif berhasil dibersihkan' };
+	}
+};
