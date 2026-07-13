@@ -12,7 +12,8 @@ const {
 	mockInsert,
 	mockInsertValues,
 	mockUpsert,
-	mockScaleLock
+	mockScaleLock,
+	mockCriteriaLock
 } = vi.hoisted(() => ({
 	mockSelect: vi.fn(),
 	mockTransaction: vi.fn(),
@@ -22,7 +23,8 @@ const {
 	mockInsert: vi.fn(),
 	mockInsertValues: vi.fn(),
 	mockUpsert: vi.fn(),
-	mockScaleLock: vi.fn()
+	mockScaleLock: vi.fn(),
+	mockCriteriaLock: vi.fn()
 }));
 
 vi.mock('$lib/server/db/index.js', () => ({
@@ -48,8 +50,13 @@ function alternativeQuery(rows: unknown[]) {
 	return { from: () => ({ where: () => ({ limit: async () => rows }) }) };
 }
 
-function criteriaQuery(rows: unknown[]) {
+function orderedCriteriaQuery(rows: unknown[]) {
 	return { from: () => ({ where: () => ({ orderBy: async () => rows }) }) };
+}
+
+function lockedCriteriaQuery(rows: unknown[]) {
+	mockCriteriaLock.mockResolvedValue(rows);
+	return { from: () => ({ where: () => ({ orderBy: () => ({ for: mockCriteriaLock }) }) }) };
 }
 
 function rowsQuery(rows: unknown[], ordered = false) {
@@ -117,7 +124,7 @@ function useTransaction(
 ) {
 	txSelect
 		.mockReturnValueOnce(alternativeQuery([{ id: alternativeId }]))
-		.mockReturnValueOnce(criteriaQuery(criteria))
+		.mockReturnValueOnce(lockedCriteriaQuery(criteria))
 		.mockReturnValueOnce(lockedRowsQuery(scales));
 	mockTransaction.mockImplementation(async (callback) =>
 		callback({ select: txSelect, delete: mockDelete, insert: mockInsert })
@@ -138,7 +145,7 @@ describe('alternative values backend', () => {
 				alternativeQuery([{ id: alternativeId, code: 'A1', name: 'Motor Test' }])
 			)
 			.mockReturnValueOnce(
-				criteriaQuery([
+				orderedCriteriaQuery([
 					{
 						...activeCriteria[0],
 						code: 'C1',
@@ -204,6 +211,7 @@ describe('alternative values backend', () => {
 			})
 		]);
 		expect(mockUpsert).toHaveBeenCalledOnce();
+		expect(mockCriteriaLock).toHaveBeenCalledWith('share');
 		expect(mockScaleLock).toHaveBeenCalledWith('share');
 	});
 

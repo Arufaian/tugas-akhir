@@ -177,7 +177,8 @@ export const actions: Actions = {
 					.select({ id: criteriaTable.id, inputType: criteriaTable.inputType })
 					.from(criteriaTable)
 					.where(eq(criteriaTable.isActive, true))
-					.orderBy(asc(criteriaTable.orderIndex));
+					.orderBy(asc(criteriaTable.orderIndex))
+					.for('share');
 
 				const payloadByCriterionId = new Map(
 					form.data.values.map((value, index) => [value.criterionId, { value, index }])

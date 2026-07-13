@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PATCH } from './+server.js';
-import { actions } from './+page.server.js';
+import { actions, load } from './+page.server.js';
 
 const {
 	mockTransaction,
@@ -11,7 +11,8 @@ const {
 	mockDeleteWhere,
 	mockUpdate,
 	mockUpdateSet,
-	mockUpdateWhere
+	mockUpdateWhere,
+	mockInsert
 } = vi.hoisted(() => ({
 	mockTransaction: vi.fn(),
 	mockSelect: vi.fn(),
@@ -20,11 +21,12 @@ const {
 	mockDeleteWhere: vi.fn(),
 	mockUpdate: vi.fn(),
 	mockUpdateSet: vi.fn(),
-	mockUpdateWhere: vi.fn()
+	mockUpdateWhere: vi.fn(),
+	mockInsert: vi.fn()
 }));
 
 vi.mock('$lib/server/db/index.js', () => ({
-	db: { transaction: mockTransaction }
+	db: { transaction: mockTransaction, select: mockSelect }
 }));
 
 const criterionId = '11111111-1111-4111-8111-111111111111';
@@ -37,8 +39,16 @@ interface ActionResult {
 }
 
 function scaleQuery(rows: unknown[]) {
-	mockFor.mockReturnValue({ limit: async () => rows });
-	return { from: () => ({ where: () => ({ for: mockFor }) }) };
+	return {
+		from: () => ({
+			where: () => ({
+				for: (lock: string) => {
+					mockFor(lock);
+					return { limit: async () => rows };
+				}
+			})
+		})
+	};
 }
 
 function valueQuery(rows: unknown[]) {
@@ -74,6 +84,20 @@ function updatePost(value: string, label = 'Diperbarui') {
 	} as unknown as Parameters<typeof actions.update>[0];
 }
 
+function createPost() {
+	const body = new FormData();
+	body.set('label', 'Baik');
+	body.set('value', '4');
+
+	return {
+		params: { id: criterionId },
+		request: new Request(`http://localhost/admin/criteria/${criterionId}/scales`, {
+			method: 'POST',
+			body
+		})
+	} as Parameters<typeof actions.create>[0];
+}
+
 function patchStatus(isActive: unknown, id = criterionId, submittedScaleId = scaleId) {
 	return {
 		params: { id },
@@ -86,19 +110,112 @@ function patchStatus(isActive: unknown, id = criterionId, submittedScaleId = sca
 }
 
 function useTransaction(scaleRows: unknown[], valueRows: unknown[] = []) {
-	mockSelect.mockReturnValueOnce(scaleQuery(scaleRows)).mockReturnValueOnce(valueQuery(valueRows));
+	mockSelect
+		.mockReturnValueOnce(scaleQuery([{ inputType: 'scale' }]))
+		.mockReturnValueOnce(scaleQuery(scaleRows))
+		.mockReturnValueOnce(valueQuery(valueRows));
 	mockTransaction.mockImplementation(async (callback) =>
-		callback({ select: mockSelect, delete: mockDelete })
+		callback({ select: mockSelect, delete: mockDelete, insert: mockInsert })
 	);
 }
 
 function useUpdateTransaction(scaleRows: unknown[], valueRows?: unknown[]) {
-	mockSelect.mockReturnValueOnce(scaleQuery(scaleRows));
+	mockSelect
+		.mockReturnValueOnce(scaleQuery([{ inputType: 'scale' }]))
+		.mockReturnValueOnce(scaleQuery(scaleRows));
 	if (valueRows) mockSelect.mockReturnValueOnce(valueQuery(valueRows));
 	mockTransaction.mockImplementation(async (callback) =>
 		callback({ select: mockSelect, update: mockUpdate })
 	);
 }
+
+function useInvalidParent() {
+	mockSelect.mockReturnValueOnce(scaleQuery([{ inputType: 'number' }]));
+	mockTransaction.mockImplementation(async (callback) =>
+		callback({
+			select: mockSelect,
+			update: mockUpdate,
+			delete: mockDelete,
+			insert: mockInsert
+		})
+	);
+}
+
+function useMissingParent() {
+	mockSelect.mockReturnValueOnce(scaleQuery([]));
+	mockTransaction.mockImplementation(async (callback) =>
+		callback({ select: mockSelect, update: mockUpdate })
+	);
+}
+
+describe('criterion scale parent guard', () => {
+	beforeEach(() => {
+		vi.resetAllMocks();
+		mockUpdateSet.mockReturnValue({ where: mockUpdateWhere });
+		mockUpdate.mockReturnValue({ set: mockUpdateSet });
+		mockDelete.mockReturnValue({ where: mockDeleteWhere });
+	});
+
+	it('rejects loading scales for a non-scale criterion', async () => {
+		mockSelect.mockReturnValueOnce(
+			valueQuery([{ id: criterionId, name: 'Harga', inputType: 'number' }])
+		);
+
+		await expect(
+			load({ params: { id: criterionId } } as Parameters<typeof load>[0])
+		).rejects.toMatchObject({
+			status: 409,
+			body: { message: 'Skala hanya dapat dikelola untuk kriteria bertipe skala' }
+		});
+	});
+
+	it('rejects creating a scale for a non-scale criterion', async () => {
+		useInvalidParent();
+
+		const result = (await actions.create(createPost())) as ActionResult;
+
+		expect(result.status).toBe(409);
+		expect(result.data?.form.message?.text).toBe(
+			'Skala hanya dapat dikelola untuk kriteria bertipe skala'
+		);
+		expect(mockInsert).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		['update', () => actions.update(updatePost('4'))],
+		['delete', () => actions.delete(post())]
+	])('rejects %s for a non-scale criterion', async (_name, run) => {
+		useInvalidParent();
+
+		const result = (await run()) as ActionResult;
+
+		expect(result.status).toBe(409);
+		expect(result.data?.form.message?.text).toBe(
+			'Skala hanya dapat dikelola untuk kriteria bertipe skala'
+		);
+	});
+
+	it('rejects status changes for a non-scale criterion', async () => {
+		useInvalidParent();
+
+		const response = await PATCH(patchStatus(false));
+
+		expect(response.status).toBe(409);
+		expect(await response.json()).toEqual({
+			message: 'Skala hanya dapat dikelola untuk kriteria bertipe skala'
+		});
+		expect(mockUpdate).not.toHaveBeenCalled();
+	});
+
+	it('distinguishes a missing parent from a missing scale', async () => {
+		useMissingParent();
+
+		const response = await PATCH(patchStatus(false));
+
+		expect(response.status).toBe(404);
+		expect(await response.json()).toEqual({ message: 'Kriteria tidak ditemukan' });
+	});
+});
 
 describe('criterion scale status', () => {
 	beforeEach(() => {
@@ -245,7 +362,7 @@ describe('update criterion scale guard', () => {
 		const result = (await actions.update(updatePost('3', 'Label baru'))) as ActionResult;
 
 		expect(result.form?.message).toEqual({ type: 'success', text: 'Skala berhasil diperbarui' });
-		expect(mockSelect).toHaveBeenCalledOnce();
+		expect(mockSelect).toHaveBeenCalledTimes(2);
 		expect(mockUpdateSet).toHaveBeenCalledWith(
 			expect.objectContaining({ label: 'Label baru', value: '3' })
 		);

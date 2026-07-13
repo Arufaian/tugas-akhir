@@ -4,8 +4,12 @@ import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { updateCriterionSchema } from '$lib/validations/criterion.schema.js';
 import { db } from '$lib/server/db/index.js';
-import { criteriaTable } from '$lib/server/db/schema/index.js';
-import { eq } from 'drizzle-orm';
+import {
+	alternativeCriterionValuesTable,
+	criteriaTable,
+	criterionScalesTable
+} from '$lib/server/db/schema/index.js';
+import { and, eq } from 'drizzle-orm';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const [criterion] = await db
@@ -56,7 +60,67 @@ export const actions: Actions = {
 				updatedAt: new Date()
 			};
 
-			await db.update(criteriaTable).set(data).where(eq(criteriaTable.id, event.params.id));
+			const result = await db.transaction(async (tx) => {
+				const [criterion] = await tx
+					.select({ inputType: criteriaTable.inputType })
+					.from(criteriaTable)
+					.where(eq(criteriaTable.id, event.params.id))
+					.for('update')
+					.limit(1);
+
+				if (!criterion) return 'not_found';
+
+				if (criterion.inputType !== form.data.inputType) {
+					const [existingValue] = await tx
+						.select({ id: alternativeCriterionValuesTable.id })
+						.from(alternativeCriterionValuesTable)
+						.where(eq(alternativeCriterionValuesTable.criterionId, event.params.id))
+						.limit(1);
+
+					if (existingValue) return 'has_values';
+
+					if (criterion.inputType === 'scale') {
+						const [activeScale] = await tx
+							.select({ id: criterionScalesTable.id })
+							.from(criterionScalesTable)
+							.where(
+								and(
+									eq(criterionScalesTable.criterionId, event.params.id),
+									eq(criterionScalesTable.isActive, true)
+								)
+							)
+							.limit(1);
+
+						if (activeScale) return 'has_active_scales';
+					}
+				}
+
+				await tx.update(criteriaTable).set(data).where(eq(criteriaTable.id, event.params.id));
+			});
+
+			if (result === 'not_found') {
+				return message(form, { type: 'error', text: 'Kriteria tidak ditemukan' }, { status: 404 });
+			}
+			if (result === 'has_values') {
+				return message(
+					form,
+					{
+						type: 'error',
+						text: 'Tipe input tidak dapat diubah karena kriteria sudah memiliki nilai alternatif'
+					},
+					{ status: 409 }
+				);
+			}
+			if (result === 'has_active_scales') {
+				return message(
+					form,
+					{
+						type: 'error',
+						text: 'Tipe input tidak dapat diubah selama skala aktif masih tersedia'
+					},
+					{ status: 409 }
+				);
+			}
 		} catch (error) {
 			const dbError = error as {
 				code?: string;

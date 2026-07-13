@@ -24,12 +24,15 @@ export async function load({ params }) {
 	if (!criterionId.success) error(404, 'Kriteria tidak ditemukan');
 
 	const [criterion] = await db
-		.select({ id: criteriaTable.id, name: criteriaTable.name })
+		.select({ id: criteriaTable.id, name: criteriaTable.name, inputType: criteriaTable.inputType })
 		.from(criteriaTable)
 		.where(eq(criteriaTable.id, criterionId.data))
 		.limit(1);
 
 	if (!criterion) error(404, 'Kriteria tidak ditemukan');
+	if (criterion.inputType !== 'scale') {
+		error(409, 'Skala hanya dapat dikelola untuk kriteria bertipe skala');
+	}
 
 	const scales = await db
 		.select()
@@ -60,20 +63,43 @@ export const actions = {
 		}
 
 		try {
-			const [nextOrder] = await db
-				.select({
-					max: sql<number>`COALESCE(MAX(${criterionScalesTable.orderIndex}), 0) + 1`
-				})
-				.from(criterionScalesTable)
-				.where(eq(criterionScalesTable.criterionId, criterionId.data));
+			const result = await db.transaction(async (tx) => {
+				const [criterion] = await tx
+					.select({ inputType: criteriaTable.inputType })
+					.from(criteriaTable)
+					.where(eq(criteriaTable.id, criterionId.data))
+					.for('update')
+					.limit(1);
 
-			await db.insert(criterionScalesTable).values({
-				criterionId: criterionId.data,
-				label: form.data.label,
-				value: String(form.data.value),
-				description: form.data.description?.trim() || null,
-				orderIndex: nextOrder.max
+				if (!criterion) return 'criterion_not_found';
+				if (criterion.inputType !== 'scale') return 'invalid_parent';
+
+				const [nextOrder] = await tx
+					.select({
+						max: sql<number>`COALESCE(MAX(${criterionScalesTable.orderIndex}), 0) + 1`
+					})
+					.from(criterionScalesTable)
+					.where(eq(criterionScalesTable.criterionId, criterionId.data));
+
+				await tx.insert(criterionScalesTable).values({
+					criterionId: criterionId.data,
+					label: form.data.label,
+					value: String(form.data.value),
+					description: form.data.description?.trim() || null,
+					orderIndex: nextOrder.max
+				});
 			});
+
+			if (result === 'criterion_not_found') {
+				return message(form, { type: 'error', text: 'Kriteria tidak ditemukan' }, { status: 404 });
+			}
+			if (result === 'invalid_parent') {
+				return message(
+					form,
+					{ type: 'error', text: 'Skala hanya dapat dikelola untuk kriteria bertipe skala' },
+					{ status: 409 }
+				);
+			}
 		} catch (err) {
 			const dbError = err as { code?: string; cause?: { code?: string } };
 			const errorCode = dbError.code ?? dbError.cause?.code;
@@ -107,6 +133,16 @@ export const actions = {
 
 		try {
 			const result = await db.transaction(async (tx) => {
+				const [criterion] = await tx
+					.select({ inputType: criteriaTable.inputType })
+					.from(criteriaTable)
+					.where(eq(criteriaTable.id, criterionId.data))
+					.for('update')
+					.limit(1);
+
+				if (!criterion) return 'criterion_not_found';
+				if (criterion.inputType !== 'scale') return 'invalid_parent';
+
 				const [scale] = await tx
 					.select({
 						criterionId: criterionScalesTable.criterionId,
@@ -150,8 +186,18 @@ export const actions = {
 					.where(eq(criterionScalesTable.id, form.data.scaleId));
 			});
 
+			if (result === 'criterion_not_found') {
+				return message(form, { type: 'error', text: 'Kriteria tidak ditemukan' }, { status: 404 });
+			}
 			if (result === 'not_found') {
 				return message(form, { type: 'error', text: 'Skala tidak ditemukan' }, { status: 404 });
+			}
+			if (result === 'invalid_parent') {
+				return message(
+					form,
+					{ type: 'error', text: 'Skala hanya dapat dikelola untuk kriteria bertipe skala' },
+					{ status: 409 }
+				);
 			}
 			if (result === 'used') {
 				return message(
@@ -191,6 +237,16 @@ export const actions = {
 
 		try {
 			const result = await db.transaction(async (tx) => {
+				const [criterion] = await tx
+					.select({ inputType: criteriaTable.inputType })
+					.from(criteriaTable)
+					.where(eq(criteriaTable.id, criterionId.data))
+					.for('update')
+					.limit(1);
+
+				if (!criterion) return 'criterion_not_found';
+				if (criterion.inputType !== 'scale') return 'invalid_parent';
+
 				const [scale] = await tx
 					.select({
 						criterionId: criterionScalesTable.criterionId,
@@ -224,8 +280,18 @@ export const actions = {
 				await tx.delete(criterionScalesTable).where(eq(criterionScalesTable.id, form.data.scaleId));
 			});
 
+			if (result === 'criterion_not_found') {
+				return message(form, { type: 'error', text: 'Kriteria tidak ditemukan' }, { status: 404 });
+			}
 			if (result === 'not_found') {
 				return message(form, { type: 'error', text: 'Skala tidak ditemukan' }, { status: 404 });
+			}
+			if (result === 'invalid_parent') {
+				return message(
+					form,
+					{ type: 'error', text: 'Skala hanya dapat dikelola untuk kriteria bertipe skala' },
+					{ status: 409 }
+				);
 			}
 			if (result === 'used') {
 				return message(

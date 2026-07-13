@@ -422,23 +422,21 @@ dengan tipe criteria.
 
 Pekerjaan:
 
-- [ ] Blok perubahan `inputType` jika criteria sudah memiliki alternative values.
-- [ ] Blok perubahan dari `scale` ke tipe lain selama masih memiliki scale aktif.
-- [ ] Pastikan load dan action create/update/nonaktifkan/pulihkan scale hanya menerima parent
+- [x] Blok perubahan `inputType` jika criteria sudah memiliki alternative values.
+- [x] Blok perubahan dari `scale` ke tipe lain selama masih memiliki scale aktif.
+- [x] Pastikan load dan action create/update/nonaktifkan/pulihkan scale hanya menerima parent
       criteria dengan `inputType = 'scale'`.
-- [ ] Return status dan pesan yang jelas untuk konflik data atau parent criteria yang salah.
+- [x] Return status dan pesan yang jelas untuk konflik data atau parent criteria yang salah.
 
 Kriteria selesai:
 
-- [ ] Alternative values tidak ditafsirkan ulang akibat perubahan tipe input.
-- [ ] Scale aktif tidak menjadi data tersembunyi pada criteria non-scale.
-- [ ] Direct request tidak dapat memutasi scale milik criteria non-scale.
+- [x] Alternative values tidak ditafsirkan ulang akibat perubahan tipe input.
+- [x] Scale aktif tidak menjadi data tersembunyi pada criteria non-scale.
+- [x] Direct request tidak dapat memutasi scale milik criteria non-scale.
 
 ## 4. Urutan Implementasi Tersisa
 
-1. Tambahkan guard perubahan tipe dan parent scale pada 3.8.
-2. Tambahkan focused tests untuk setiap lifecycle dan constraint.
-3. Jalankan migration verification, `bun run check`, ESLint changed files, `bun run test`, database
+1. Jalankan migration verification, `bun run check`, ESLint changed files, `bun run test`, database
    advisors, dan `ponytail-review`.
 
 ## 5. Batas Cakupan
