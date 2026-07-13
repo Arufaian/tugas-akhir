@@ -325,8 +325,8 @@ Test mencakup:
 1. [x] Buat mock UI menggunakan bentuk data hasil akhir.
 2. [x] Perbarui schema calculation results dan details.
 3. [x] Generate, periksa, dan jalankan migration.
-4. [ ] Implement pure calculation service.
-5. [ ] Tambahkan unit test rumus dan validasi.
+4. [x] Implement pure calculation service.
+5. [x] Tambahkan unit test rumus dan validasi.
 6. [ ] Implement transaction persistence dan bulk insert.
 7. [ ] Tambahkan test persistence contract.
 8. [ ] Implement `load()` dan action `calculate`.
