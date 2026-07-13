@@ -252,7 +252,7 @@
 											<Stepper.Description>{stage.navDescription}</Stepper.Description>
 										</div>
 									</Stepper.Trigger>
-									<Stepper.Separator class="lg:left-14" />
+									<Stepper.Separator class="left-[calc(50%-0.875rem)] lg:left-16.5" />
 								</Stepper.Item>
 							{/each}
 						</Stepper.Nav>
