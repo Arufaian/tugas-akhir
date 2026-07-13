@@ -329,9 +329,9 @@ Test mencakup:
 5. [x] Tambahkan unit test rumus dan validasi.
 6. [x] Implement transaction persistence dan bulk insert.
 7. [x] Tambahkan test persistence contract.
-8. [ ] Implement `load()` dan action `calculate`.
-9. [ ] Hubungkan data nyata ke Tabs dan Stepper.
-10. [ ] Implement state readiness, empty, loading, success, dan error.
+8. [x] Implement `load()` dan action `calculate`.
+9. [x] Hubungkan data nyata ke Tabs dan Stepper.
+10. [x] Implement state readiness, empty, loading, success, dan error.
 11. [ ] Implement guard penghapusan alternative beserta test.
 12. [ ] Jalankan type check, lint, test, dan pemeriksaan responsive UI.
 
@@ -354,3 +354,13 @@ Test mencakup:
 Route dan UI riwayat akan direncanakan dalam `moora-calculation-history-roadmap.md` setelah roadmap
 ini selesai. Roadmap tersebut nantinya membahas backend list/detail run, pagination, snapshot detail,
 status `404`, frontend daftar/detail, navigasi, dan ekstraksi komponen bersama.
+
+### 13.1 Akses Sales dan Retensi
+
+- Akses sales dirancang melalui route terpisah karena `/admin` tetap khusus admin.
+- Kalkulasi sales secara default hanya preview dan tidak disimpan.
+- Penyimpanan ke riwayat menjadi aksi eksplisit, bukan efek otomatis setiap kalkulasi.
+- Admin tetap dapat membuat run resmi yang selalu tersimpan.
+- Gunakan kembali run terbaru ketika input belum berubah agar tidak menyimpan snapshot identik.
+- Sebelum mengaktifkan penyimpanan untuk sales, tentukan retention policy. Pada worst case 100 run
+  maksimal per hari, estimasi Free Tier hanya sekitar 39-65 hari.
