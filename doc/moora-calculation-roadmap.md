@@ -327,8 +327,8 @@ Test mencakup:
 3. [x] Generate, periksa, dan jalankan migration.
 4. [x] Implement pure calculation service.
 5. [x] Tambahkan unit test rumus dan validasi.
-6. [ ] Implement transaction persistence dan bulk insert.
-7. [ ] Tambahkan test persistence contract.
+6. [x] Implement transaction persistence dan bulk insert.
+7. [x] Tambahkan test persistence contract.
 8. [ ] Implement `load()` dan action `calculate`.
 9. [ ] Hubungkan data nyata ke Tabs dan Stepper.
 10. [ ] Implement state readiness, empty, loading, success, dan error.
