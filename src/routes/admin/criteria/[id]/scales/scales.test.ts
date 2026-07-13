@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { PATCH } from './+server.js';
 import { actions, load } from './+page.server.js';
 
 const {
@@ -34,8 +33,13 @@ const scaleId = '22222222-2222-4222-8222-222222222222';
 
 interface ActionResult {
 	status?: number;
-	data?: { form: { message?: { type: string; text: string } } };
+	data?: {
+		form: { message?: { type: string; text: string } };
+		message?: string;
+	};
 	form?: { message?: { type: string; text: string } };
+	success?: boolean;
+	isActive?: boolean;
 }
 
 function scaleQuery(rows: unknown[]) {
@@ -98,15 +102,18 @@ function createPost() {
 	} as Parameters<typeof actions.create>[0];
 }
 
-function patchStatus(isActive: unknown, id = criterionId, submittedScaleId = scaleId) {
+function statusPost(isActive: unknown, id = criterionId, submittedScaleId = scaleId) {
+	const body = new FormData();
+	body.set('scaleId', String(submittedScaleId));
+	body.set('isActive', String(isActive));
+
 	return {
 		params: { id },
 		request: new Request(`http://localhost/admin/criteria/${id}/scales`, {
-			method: 'PATCH',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ scaleId: submittedScaleId, isActive })
+			method: 'POST',
+			body
 		})
-	} as Parameters<typeof PATCH>[0];
+	} as Parameters<typeof actions.status>[0];
 }
 
 function useTransaction(scaleRows: unknown[], valueRows: unknown[] = []) {
@@ -198,22 +205,20 @@ describe('criterion scale parent guard', () => {
 	it('rejects status changes for a non-scale criterion', async () => {
 		useInvalidParent();
 
-		const response = await PATCH(patchStatus(false));
+		const result = (await actions.status(statusPost(false))) as ActionResult;
 
-		expect(response.status).toBe(409);
-		expect(await response.json()).toEqual({
-			message: 'Skala hanya dapat dikelola untuk kriteria bertipe skala'
-		});
+		expect(result.status).toBe(409);
+		expect(result.data?.message).toBe('Skala hanya dapat dikelola untuk kriteria bertipe skala');
 		expect(mockUpdate).not.toHaveBeenCalled();
 	});
 
 	it('distinguishes a missing parent from a missing scale', async () => {
 		useMissingParent();
 
-		const response = await PATCH(patchStatus(false));
+		const result = (await actions.status(statusPost(false))) as ActionResult;
 
-		expect(response.status).toBe(404);
-		expect(await response.json()).toEqual({ message: 'Kriteria tidak ditemukan' });
+		expect(result.status).toBe(404);
+		expect(result.data?.message).toBe('Kriteria tidak ditemukan');
 	});
 });
 
@@ -225,18 +230,22 @@ describe('criterion scale status', () => {
 	});
 
 	it('returns 400 for an invalid criterion, scale, or status', async () => {
-		expect((await PATCH(patchStatus(true, 'invalid-id'))).status).toBe(400);
-		expect((await PATCH(patchStatus(true, criterionId, 'invalid-id'))).status).toBe(400);
-		expect((await PATCH(patchStatus('false'))).status).toBe(400);
+		expect(((await actions.status(statusPost(true, 'invalid-id'))) as ActionResult).status).toBe(
+			400
+		);
+		expect(
+			((await actions.status(statusPost(true, criterionId, 'invalid-id'))) as ActionResult).status
+		).toBe(400);
+		expect(((await actions.status(statusPost('invalid'))) as ActionResult).status).toBe(400);
 		expect(mockTransaction).not.toHaveBeenCalled();
 	});
 
 	it('returns 404 when the scale does not belong to the criterion', async () => {
 		useUpdateTransaction([]);
 
-		const response = await PATCH(patchStatus(false));
+		const result = (await actions.status(statusPost(false))) as ActionResult;
 
-		expect(response.status).toBe(404);
+		expect(result.status).toBe(404);
 		expect(mockFor).toHaveBeenCalledWith('update');
 		expect(mockUpdate).not.toHaveBeenCalled();
 	});
@@ -244,20 +253,19 @@ describe('criterion scale status', () => {
 	it.each([false, true])('sets isActive to %s inside the locked transaction', async (isActive) => {
 		useUpdateTransaction([{ id: scaleId }]);
 
-		const response = await PATCH(patchStatus(isActive));
+		const result = (await actions.status(statusPost(isActive))) as ActionResult;
 
-		expect(response.status).toBe(200);
-		expect(await response.json()).toEqual({ success: true, isActive });
+		expect(result).toEqual({ success: true, isActive });
 		expect(mockUpdateSet).toHaveBeenCalledWith({ isActive, updatedAt: expect.any(Date) });
 	});
 
 	it('returns a generic 500 response when the database fails', async () => {
 		mockTransaction.mockRejectedValue(new Error('sensitive database error'));
 
-		const response = await PATCH(patchStatus(false));
+		const result = (await actions.status(statusPost(false))) as ActionResult;
 
-		expect(response.status).toBe(500);
-		expect(await response.json()).toEqual({ message: 'Gagal mengubah status skala' });
+		expect(result.status).toBe(500);
+		expect(result.data?.message).toBe('Gagal mengubah status skala');
 	});
 });
 

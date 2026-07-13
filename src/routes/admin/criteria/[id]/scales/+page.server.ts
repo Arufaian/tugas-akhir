@@ -17,6 +17,10 @@ import {
 import { canonicalDecimal } from '$lib/utils/decimal.js';
 
 const uuidSchema = z.uuid();
+const statusSchema = z.object({
+	scaleId: z.uuid(),
+	isActive: z.enum(['true', 'false']).transform((value) => value === 'true')
+});
 
 export async function load({ params }) {
 	const criterionId = uuidSchema.safeParse(params.id);
@@ -221,6 +225,63 @@ export const actions = {
 		}
 
 		return message(form, { type: 'success', text: 'Skala berhasil diperbarui' });
+	},
+	status: async ({ params, request }) => {
+		const criterionId = uuidSchema.safeParse(params.id);
+		const status = statusSchema.safeParse(Object.fromEntries(await request.formData()));
+
+		if (!criterionId.success || !status.success) {
+			return fail(400, { message: 'Status skala tidak valid' });
+		}
+
+		try {
+			const result = await db.transaction(async (tx) => {
+				const [criterion] = await tx
+					.select({ inputType: criteriaTable.inputType })
+					.from(criteriaTable)
+					.where(eq(criteriaTable.id, criterionId.data))
+					.for('update')
+					.limit(1);
+
+				if (!criterion) return 'criterion_not_found';
+				if (criterion.inputType !== 'scale') return 'invalid_parent';
+
+				const [scale] = await tx
+					.select({ id: criterionScalesTable.id })
+					.from(criterionScalesTable)
+					.where(
+						and(
+							eq(criterionScalesTable.id, status.data.scaleId),
+							eq(criterionScalesTable.criterionId, criterionId.data)
+						)
+					)
+					.for('update')
+					.limit(1);
+
+				if (!scale) return 'not_found';
+
+				await tx
+					.update(criterionScalesTable)
+					.set({ isActive: status.data.isActive, updatedAt: new Date() })
+					.where(eq(criterionScalesTable.id, scale.id));
+
+				return 'updated';
+			});
+
+			if (result === 'criterion_not_found') {
+				return fail(404, { message: 'Kriteria tidak ditemukan' });
+			}
+			if (result === 'not_found') return fail(404, { message: 'Skala tidak ditemukan' });
+			if (result === 'invalid_parent') {
+				return fail(409, {
+					message: 'Skala hanya dapat dikelola untuk kriteria bertipe skala'
+				});
+			}
+
+			return { success: true, isActive: status.data.isActive };
+		} catch {
+			return fail(500, { message: 'Gagal mengubah status skala' });
+		}
 	},
 	delete: async (event) => {
 		const form = await superValidate(event, zod4(deleteCriterionScaleSchema));
