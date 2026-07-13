@@ -1,5 +1,14 @@
 import { sql } from 'drizzle-orm';
-import { pgTable, uuid, numeric, integer, timestamp, unique, check } from 'drizzle-orm/pg-core';
+import {
+	pgTable,
+	uuid,
+	text,
+	numeric,
+	integer,
+	timestamp,
+	unique,
+	check
+} from 'drizzle-orm/pg-core';
 import { alternativesTable } from './alternative';
 import { calculationRunsTable } from './calculation-run';
 
@@ -12,7 +21,9 @@ export const calculationResultsTable = pgTable(
 			.references(() => calculationRunsTable.id, { onDelete: 'cascade' }),
 		alternativeId: uuid('alternative_id')
 			.notNull()
-			.references(() => alternativesTable.id, { onDelete: 'cascade' }),
+			.references(() => alternativesTable.id, { onDelete: 'restrict' }),
+		alternativeCode: text('alternative_code').notNull(),
+		alternativeName: text('alternative_name').notNull(),
 		totalBenefit: numeric('total_benefit', { precision: 18, scale: 9 }).notNull(),
 		totalCost: numeric('total_cost', { precision: 18, scale: 9 }).notNull(),
 		optimizationScore: numeric('optimization_score', { precision: 18, scale: 9 }).notNull(),

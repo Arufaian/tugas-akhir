@@ -1,313 +1,356 @@
-# Roadmap — Kalkulasi MOORA
+# Roadmap Kalkulasi MOORA
 
 ## 1. Tujuan
 
-Memetakan pekerjaan kalkulasi MOORA setelah data alternative values lengkap dan siap digunakan
-sebagai decision matrix.
+Mengganti implementasi mock pada `/admin/moora-calculation` dengan kalkulasi MOORA yang membaca
+data aktif dari database, memvalidasi kesiapan decision matrix, menghitung hasil, dan menyimpannya
+secara atomik.
 
 Panduan rumus dan contoh langkah demi langkah tersedia di
 [`moora-calculation-guide.md`](./moora-calculation-guide.md).
 
-## 2. Prasyarat
+Roadmap ini hanya mencakup halaman kalkulasi utama. Daftar dan detail riwayat kalkulasi akan dibahas
+dalam roadmap terpisah setelah kontrak kalkulasi utama stabil.
 
+## 2. Ruang Lingkup
+
+Termasuk:
+
+- Schema snapshot untuk calculation results dan details.
+- Migration schema dan foreign key.
+- Validasi kesiapan decision matrix.
+- Service kalkulasi MOORA.
+- Transaction persistence untuk run, results, dan details.
+- `load()` dan action `calculate` pada halaman kalkulasi utama.
+- Penggantian mock UI dengan data backend nyata.
+- Guard penghapusan alternative yang sudah digunakan.
+- Test minimum untuk rumus, validasi, transaction boundary, dan delete guard.
+
+Tidak termasuk:
+
+- Route `/admin/moora-calculation/history`.
+- Route `/admin/moora-calculation/history/[id]`.
+- Pagination calculation runs.
+- UI daftar dan detail riwayat.
+- Perbandingan antar-run.
+- Export, chart, penjadwalan, atau metode SPK lain.
+
+Walaupun UI riwayat belum dibuat, snapshot tetap disimpan sekarang agar setiap run tidak bergantung
+pada nama atau metadata master yang dapat berubah.
+
+## 3. Prasyarat Kalkulasi
+
+Kalkulasi hanya dapat dijalankan jika:
+
+- Minimal satu alternative aktif tersedia.
+- Minimal satu criterion aktif tersedia.
 - Semua alternative aktif memiliki nilai untuk semua criteria aktif.
-- Bobot criteria aktif sudah dinormalisasi dan berjumlah `1.0`.
-- Criteria bertipe scale memiliki opsi yang valid.
-- Tidak ada nilai scale yatim atau nilai criteria yang tidak sesuai tipe input.
-- Completeness checker dari
-  [`criteria-alternative-values-roadmap.md`](./criteria-alternative-values-roadmap.md) sudah tersedia.
+- Total normalized weight criteria aktif sama dengan `1.0` dalam toleransi precision database.
+- Tidak ada normalized weight bernilai nol.
+- Criterion bertipe scale memiliki opsi aktif dan nilai yang dipilih masih valid.
+- Seluruh raw value finite dan nonnegatif.
+- Nilai pembagi normalisasi setiap criterion lebih besar dari nol.
 
-Kalkulasi harus ditolak jika salah satu prasyarat belum terpenuhi.
+Gunakan kembali `checkDecisionMatrixCompleteness()` dari
+`src/lib/server/services/decision-matrix.ts`. Kalkulasi harus ditolak sebelum penyimpanan jika salah
+satu prasyarat tidak terpenuhi.
 
-## 3. Service Kalkulasi
+## 4. Schema dan Migration
 
-Urutan minimal:
+Schema diselesaikan sebelum service, route, dan UI dihubungkan ke database.
 
-1. Ambil active alternatives.
-2. Ambil active criteria.
-3. Ambil `alternative_criterion_values`.
-4. Bentuk decision matrix.
-5. Normalisasi matrix menggunakan norma Euclidean setiap kolom criterion.
-6. Kalikan nilai normal dengan bobot criteria.
-7. Hitung total benefit dan total cost.
-8. Hitung optimization score `benefit - cost`.
-9. Tentukan ranking secara menurun berdasarkan optimization score. Jika score sama, gunakan kode
-   alternative sebagai tie-breaker agar ranking tetap unik dan deterministik.
-10. Simpan calculation run, results, dan details dalam satu transaction.
+### 4.1 Calculation Runs
 
-## 4. Penyimpanan Hasil
+`calculation_runs` tetap menyimpan:
 
-- `calculation_runs` menyimpan identitas run dan jumlah alternative/criteria.
-- `calculation_results` menyimpan snapshot kode dan nama alternative, total benefit, total cost,
-  optimization score, dan ranking.
-- `calculation_details` menyimpan raw value, denominator, normalized value, weight, weighted value,
-  criterion type, serta snapshot kode, nama, unit, urutan, input type, dan label value criterion
-  untuk setiap cell.
-- Satu run harus menyimpan snapshot hasil yang dapat dibaca kembali tanpa menghitung ulang data
-  master saat ini.
-- Alternative yang sudah digunakan dalam histori tidak dapat dihapus permanen.
-- Run, results, dan details disimpan dalam satu transaction. Kegagalan insert result atau detail
-  harus membatalkan seluruh run.
+- Identitas run.
+- Nama run yang dibuat dari waktu kalkulasi.
+- Admin pembuat run.
+- Jumlah alternative.
+- Jumlah criteria.
+- Waktu pembuatan.
 
-## 5. Implementasi Backend
+Tidak perlu menambah metadata atau catatan wajib pada tahap ini.
 
-### 5.1 Kontrak Service
+### 4.2 Calculation Results
 
-Buat `src/lib/server/services/moora.ts` sebagai service kalkulasi. Tidak perlu repository layer,
-class kalkulator, queue, cache, RPC, atau dependency decimal baru.
+Tambahkan snapshot berikut pada `calculation_results`:
 
-Input service memuat:
+- `alternative_code` sebagai `text not null`.
+- `alternative_name` sebagai `text not null`.
+
+Tetap simpan `alternative_id` untuk integritas referensial. Snapshot category tidak diperlukan karena
+tidak digunakan dalam rumus atau identitas utama hasil.
+
+### 4.3 Calculation Details
+
+Tambahkan snapshot berikut pada `calculation_details`:
+
+- `criterion_code` sebagai `text not null`.
+- `criterion_name` sebagai `text not null`.
+- `criterion_unit` sebagai `text not null`.
+- `criterion_order_index` sebagai `integer not null`.
+- `criterion_input_type` menggunakan enum input type yang sudah tersedia.
+- `label_value` sebagai `text` nullable.
+
+Kolom perhitungan yang sudah ada tetap digunakan:
+
+- Raw value.
+- Denominator atau nilai pembagi normalisasi.
+- Normalized value.
+- Weight.
+- Weighted value.
+- Criterion type benefit/cost.
+
+Kolom database `criterionType` dirapikan menjadi `criterion_type` pada migration yang sama agar
+konsisten dengan penamaan `snake_case` schema lainnya.
+
+Snapshot alternative tidak perlu diduplikasi pada setiap detail karena tersedia pada result dalam run
+yang sama.
+
+### 4.4 Foreign Key
+
+Aturan foreign key:
+
+- Result dan detail ke calculation run tetap `ON DELETE CASCADE`.
+- Result dan detail ke alternative menjadi `ON DELETE RESTRICT`.
+- Detail ke criterion menjadi `ON DELETE RESTRICT`.
+
+Dengan aturan ini, satu run dapat dihapus secara utuh, tetapi master yang sudah dipakai tidak dapat
+menghapus histori secara tidak sengaja.
+
+### 4.5 Urutan Migration
+
+1. Perbarui file schema Drizzle.
+2. Jalankan `bun run db:generate`.
+3. Periksa SQL agar hanya melakukan rename `criterion_type`, menambah kolom snapshot, dan mengganti
+   foreign key terkait.
+4. Jalankan `bun run db:migrate`.
+5. Verifikasi kolom, constraint, dan foreign key pada database.
+6. Jalankan Supabase security dan performance advisors.
+
+Tidak perlu membuat table baru, trigger, function, atau dependency database tambahan.
+
+## 5. Service Kalkulasi
+
+Buat `src/lib/server/services/moora.ts`. Tidak perlu repository layer, class calculator, queue,
+cache, RPC, atau dependency decimal baru.
+
+### 5.1 Input
+
+Service menerima:
 
 - Active alternatives beserta id, kode, dan nama.
-- Active criteria beserta metadata snapshot, tipe benefit/cost, input type, urutan, dan normalized
-  weight.
+- Active criteria beserta kode, nama, unit, urutan, tipe, input type, dan normalized weight.
 - Alternative criterion values beserta raw value dan label value.
 - Active criterion scales untuk validasi nilai scale.
 
-Output service memuat:
+### 5.2 Output
+
+Service menghasilkan:
 
 - Decision matrix.
 - Nilai pembagi normalisasi setiap criterion.
 - Normalized matrix.
 - Weighted matrix.
 - Total benefit, total cost, optimization score, dan ranking setiap alternative.
-- Results dan details yang siap disimpan.
-
-### 5.2 Validasi Kalkulasi
-
-Gunakan kembali `checkDecisionMatrixCompleteness()` dari
-`src/lib/server/services/decision-matrix.ts`, lalu validasi:
-
-- Minimal satu active alternative dan satu active criterion.
-- Seluruh cell matrix lengkap dan nilai scale masih valid.
-- Total normalized weight criteria aktif sama dengan `1.0` dan tidak ada bobot nol.
-- Seluruh raw value finite dan nonnegatif.
-- Nilai pembagi normalisasi setiap criterion lebih besar dari nol.
-
-Kalkulasi ditolak sebelum penyimpanan jika salah satu validasi gagal.
+- Result rows dan detail rows yang sudah memuat snapshot serta siap disimpan.
 
 ### 5.3 Perhitungan
 
-Gunakan `Number` dan `Math.sqrt`; format nilai persistensi sampai 9 angka desimal sesuai precision
-database.
+Gunakan `Number` dan `Math.sqrt`. Pertahankan precision penuh selama kalkulasi dan format nilai
+persistensi sampai 9 angka desimal.
 
 Urutan rumus:
 
 1. `x*_{ij} = x_{ij} / sqrt(sum_{k=1}^{m} x_{kj}^2)`.
 2. `v_{ij} = w_j * x*_{ij}`.
-3. `B_i = sum(v_{ij})` untuk benefit.
-4. `K_i = sum(v_{ij})` untuk cost.
+3. `B_i = sum(v_{ij})` untuk criteria benefit.
+4. `K_i = sum(v_{ij})` untuk criteria cost.
 5. `Y_i = B_i - K_i`.
-6. Urutkan score 9 desimal secara menurun dan gunakan kode alternative sebagai tie-breaker.
+6. Urutkan score 9 desimal secara menurun.
+7. Gunakan kode alternative secara ascending sebagai tie-breaker.
 
-### 5.4 Transaction dan Persistence
+### 5.4 Snapshot Label
 
-Jalankan pembacaan input, validasi, kalkulasi, dan penyimpanan dalam satu Drizzle transaction dengan
-isolation level `repeatable read`.
+- Nilai number tidak memerlukan label.
+- Nilai scale menggunakan label scale yang tersimpan pada value.
+- Nilai `tech_features` diubah dari JSON feature ids menjadi nama fitur yang dapat dibaca.
+- Label disimpan pada detail agar tampilan hasil tidak perlu membaca ulang metadata input saat ini.
+
+## 6. Transaction dan Persistence
+
+Pembacaan input, validasi, kalkulasi, dan penyimpanan dijalankan dalam satu Drizzle transaction
+dengan isolation level `repeatable read`.
 
 Urutan transaction:
 
-1. Ambil active alternatives, criteria, values, dan scales.
-2. Validasi readiness dan bentuk decision matrix.
-3. Hitung seluruh hasil MOORA.
-4. Insert satu calculation run dan ambil id-nya.
-5. Bulk insert seluruh calculation results.
-6. Bulk insert seluruh calculation details.
-7. Commit hanya jika seluruh operasi berhasil.
+1. Ambil active alternatives.
+2. Ambil active criteria.
+3. Ambil alternative criterion values.
+4. Ambil active criterion scales.
+5. Validasi dan hitung hasil MOORA.
+6. Insert satu calculation run dan ambil id-nya.
+7. Bulk insert seluruh calculation results.
+8. Bulk insert seluruh calculation details.
+9. Commit hanya jika seluruh operasi berhasil.
 
-Jangan melakukan insert result/detail satu per satu. Setiap error harus me-rollback seluruh run.
+Jangan insert result atau detail satu per satu. Error pada result atau detail harus membatalkan seluruh
+run.
 
-### 5.5 Route Server
+## 7. Route Server Utama
 
-`/admin/moora-calculation/+page.server.ts` menangani:
+`/admin/moora-calculation/+page.server.ts` menangani dua kebutuhan.
 
-- `load()` untuk readiness, run terbaru, results, dan details terbaru.
-- Action `calculate` untuk memvalidasi admin, menjalankan service, dan mengembalikan run id.
-- Validation error sebagai `fail(400, ...)` dan database error tanpa membocorkan detail internal.
+### 7.1 Load
 
-`/admin/moora-calculation/history/+page.server.ts` mengambil daftar run dengan pagination sederhana
-20 row per halaman.
+`load()` mengembalikan:
 
-`/admin/moora-calculation/history/[id]/+page.server.ts` mengambil snapshot run, results, dan details,
-serta return `404` jika run tidak ditemukan.
+- Status readiness dan daftar masalah.
+- Run terbaru jika tersedia.
+- Results dan details dari run terbaru.
+- Data matrix yang sudah dipetakan ke kontrak UI.
 
-Halaman histori harus membaca label snapshot, bukan join nama terbaru dari master data.
+Numeric dari Drizzle dikonversi ke `number` sebelum dikirim ke UI.
 
-### 5.6 Guard Penghapusan Alternative
+### 7.2 Action Calculate
+
+Action `calculate`:
+
+- Mengambil user tervalidasi dari `safeGetSession()` untuk `created_by`.
+- Menjalankan transaction service.
+- Mengembalikan run id saat berhasil.
+- Mengembalikan `fail(400, ...)` untuk data yang belum siap.
+- Mengembalikan pesan generik untuk database error.
+
+Admin authorization tetap ditangani oleh RBAC hook yang sudah melindungi seluruh route `/admin`.
+
+## 8. UI Halaman Utama
+
+Pertahankan struktur mock UI yang sudah tersedia, lalu ganti sumber datanya.
+
+### 8.1 Perubahan Wajib
+
+- Hapus fixture server statis.
+- Hapus simulasi timeout kalkulasi.
+- Ubah tombol menjadi enhanced form action `calculate`.
+- Hapus badge `Mock data`.
+- Hapus tampilan category alternative karena bukan bagian snapshot hasil.
+- Ganti label `Denominator` menjadi `Nilai pembagi normalisasi`.
+- Buat caption matrix berdasarkan jumlah data nyata.
+
+### 8.2 State Halaman
+
+Halaman mendukung:
+
+1. Belum siap: tampilkan masalah dan nonaktifkan tombol kalkulasi.
+2. Siap tanpa run: tampilkan empty state dan tombol aktif.
+3. Sedang menghitung: nonaktifkan tombol dan tampilkan spinner.
+4. Berhasil: tampilkan run terbaru, ranking, dan rincian perhitungan.
+5. Gagal: tampilkan toast tanpa menghilangkan hasil run sebelumnya.
+
+### 8.3 Tampilan Hasil
+
+Gunakan komponen yang sudah tersedia:
+
+- `Alert` untuk masalah readiness.
+- `Empty` untuk kondisi tanpa run.
+- `Tabs` untuk hasil dan rincian.
+- `Stepper` untuk empat tahap perhitungan.
+- `Table` untuk ranking dan matrix.
+- `Card`, `Badge`, `Button`, dan `Spinner` untuk metadata serta action.
+- `svelte-sonner` untuk feedback.
+
+Tidak perlu menambah chart, dialog metadata, data table interaktif, atau dependency UI baru.
+
+## 9. Guard Penghapusan Alternative
 
 Perbarui endpoint delete alternative agar:
 
-1. Mengunci dan memastikan alternative masih ada.
-2. Menolak hard delete dengan status `409` jika memiliki values atau calculation history.
-3. Menghapus row database sebelum mencoba membersihkan gambar Storage.
-4. Mempertahankan alternative dan gambar jika delete database gagal.
+1. Validasi UUID.
+2. Lock alternative dengan `FOR UPDATE` di dalam transaction.
+3. Return `404` jika alternative tidak ditemukan.
+4. Return `409` jika alternative memiliki values.
+5. Return `409` jika alternative memiliki calculation results.
+6. Hapus row database jika tidak digunakan.
+7. Bersihkan gambar Storage hanya setelah database berhasil dihapus.
 
 FK `RESTRICT` menjadi perlindungan terakhir jika penghapusan tidak melewati endpoint aplikasi.
 
-### 5.7 Tests
+## 10. Tests
 
-Tambahkan test minimum untuk:
+Tambahkan test minimum berikut.
 
-- Matrix tidak lengkap, bobot tidak valid, raw value tidak valid, dan nilai pembagi nol.
-- Normalisasi, pembobotan, benefit/cost, optimization score, dan ranking.
-- Score seri dengan tie-breaker kode alternative.
-- Rollback run ketika insert result atau detail gagal.
-- Alternative dengan values atau calculation history tidak dapat dihapus.
-- Perubahan master tidak mengubah snapshot lama.
-- Detail history yang tidak ditemukan menghasilkan `404`.
+### 10.1 Pure Calculation
 
-Gunakan satu fixture kecil berisi 2–3 alternatives dan 2 criteria (satu benefit dan satu cost) untuk
-menguji rumus utama.
+Gunakan satu fixture kecil berisi 2-3 alternatives dan 2 criteria, satu benefit dan satu cost.
 
-## 6. UI/UX Halaman Kalkulasi
+Test mencakup:
 
-Halaman memiliki satu tugas utama: menjalankan kalkulasi MOORA dan membuat hasilnya mudah diaudit
-oleh admin.
-
-### 6.1 Route
-
-- `/admin/moora-calculation` untuk readiness, menjalankan kalkulasi, dan membaca hasil terbaru.
-- `/admin/moora-calculation/history` untuk daftar calculation run.
-- `/admin/moora-calculation/history/[id]` untuk membaca snapshot satu run.
-
-Kalkulasi langsung dijalankan saat admin menekan `Hitung MOORA`. Tidak perlu dialog nama atau
-catatan karena `runName` dan `note` bersifat opsional. Nama run dapat dibuat dari waktu kalkulasi.
-
-### 6.2 Struktur Halaman Utama
-
-Urutan tampilan:
-
-1. Header halaman, status readiness, tombol `Hitung MOORA`, dan tautan ke riwayat.
-2. Alert prasyarat jika data belum siap beserta tautan ke halaman yang perlu diperbaiki.
-3. Metadata run terbaru: nama/waktu, jumlah alternative, dan jumlah criteria.
-4. Tabs `Hasil & Peringkat` dan `Rincian Perhitungan`.
-
-Tab default adalah `Hasil & Peringkat`. Status readiness dan tombol kalkulasi berada di luar Tabs
-agar selalu terlihat.
-
-### 6.3 Hasil dan Peringkat
-
-Tampilkan satu table dengan kolom:
-
+- Matrix tidak lengkap.
+- Bobot tidak valid atau nol.
+- Raw value tidak finite atau negatif.
+- Nilai pembagi normalisasi nol.
+- Normalisasi dan pembobotan.
+- Total benefit dan cost.
+- Optimization score.
 - Ranking.
-- Kode dan nama alternative.
-- Total benefit.
-- Total cost.
-- Optimization score (`Y_i`).
+- Score seri dengan tie-breaker kode.
 
-Hasil diurutkan dari optimization score terbesar. Ranking pertama diberi penekanan visual tanpa
-menambah podium, chart, atau dekorasi lain yang tidak membantu pembacaan data.
+### 10.2 Persistence Contract
 
-### 6.4 Rincian Perhitungan
+Test route/service dengan mock Drizzle untuk memastikan:
 
-Gunakan Stepper sebagai navigasi tahapan matematis, bukan indikator proses asynchronous:
+- Transaction menggunakan `repeatable read`.
+- Run diinsert satu kali.
+- Results diinsert secara bulk.
+- Details diinsert secara bulk.
+- Validation failure tidak melakukan insert.
+- Result atau detail insert failure tidak menghasilkan response sukses.
+- Snapshot berasal dari input saat kalkulasi.
 
-1. **Matriks Keputusan (`X`)**: raw value setiap alternative terhadap setiap criterion.
-2. **Matriks Normalisasi (`X*`)**:
-   `x*_{ij} = x_{ij} / sqrt(sum_{k=1}^{m} x_{kj}^2)`. Nilai pembagi normalisasi ditampilkan sebagai
-   metadata pada kolom criterion, bukan sebagai matrix terpisah.
-3. **Matriks Normalisasi Terbobot (`V`)**: `v_{ij} = w_j * x*_{ij}`.
-4. **Nilai Optimasi (`Y_i`)**: total benefit, total cost, dan `Y_i = B_i - K_i`.
+Tidak perlu menambah test database infrastructure hanya untuk membuktikan rollback bawaan PostgreSQL.
 
-Setiap tahap dapat dipilih langsung dan menyediakan tombol `Sebelumnya` serta `Selanjutnya`.
-Gunakan label pendek pada navigasi: `Keputusan`, `Normalisasi`, `Terbobot`, dan `Optimasi`.
+### 10.3 Delete Guard
 
-Ketentuan table matrix:
+Test mencakup:
 
-- Baris merepresentasikan alternative dan kolom merepresentasikan criterion.
-- Header criterion menampilkan kode, normalized weight, serta badge `Benefit` atau `Cost`.
-- Angka rata kanan dengan `tabular-nums` dan ditampilkan konsisten sampai 6 angka desimal.
-- Table menggunakan horizontal scroll pada viewport sempit; matrix tidak diubah menjadi cards.
-- Kode/nama alternative tetap mudah dikenali selama table digulir.
+- Alternative dengan values menghasilkan `409`.
+- Alternative dengan calculation results menghasilkan `409`.
+- Database dihapus sebelum Storage cleanup.
+- Database failure tidak membersihkan gambar.
 
-### 6.5 State Halaman
+## 11. Urutan Implementasi
 
-1. **Belum siap**: tampilkan masalah readiness dan nonaktifkan tombol kalkulasi.
-2. **Siap, belum ada run**: tampilkan empty state dan tombol kalkulasi aktif.
-3. **Sedang menghitung**: nonaktifkan tombol dan tampilkan spinner untuk mencegah request ganda.
-4. **Berhasil**: tampilkan hasil terbaru, ranking, dan rincian matrix.
-5. **Gagal**: tampilkan toast error tanpa menghilangkan hasil run sebelumnya.
-6. **Riwayat kosong**: tampilkan empty state dengan tautan kembali ke halaman kalkulasi.
-7. **Snapshot tidak ditemukan**: return status `404` dan pesan yang jelas.
+1. [x] Buat mock UI menggunakan bentuk data hasil akhir.
+2. [x] Perbarui schema calculation results dan details.
+3. [x] Generate, periksa, dan jalankan migration.
+4. [ ] Implement pure calculation service.
+5. [ ] Tambahkan unit test rumus dan validasi.
+6. [ ] Implement transaction persistence dan bulk insert.
+7. [ ] Tambahkan test persistence contract.
+8. [ ] Implement `load()` dan action `calculate`.
+9. [ ] Hubungkan data nyata ke Tabs dan Stepper.
+10. [ ] Implement state readiness, empty, loading, success, dan error.
+11. [ ] Implement guard penghapusan alternative beserta test.
+12. [ ] Jalankan type check, lint, test, dan pemeriksaan responsive UI.
 
-### 6.6 Komponen UI
+## 12. Kriteria Selesai
 
-Gunakan komponen yang sudah tersedia di `src/lib/components/ui`:
-
-- `Tabs` untuk memisahkan hasil dan rincian.
-- `Stepper` untuk empat tahap perhitungan.
-- `Table` untuk ranking dan matrix.
-- `Card` untuk metadata run dan kelompok konten.
-- `Badge` untuk readiness serta tipe benefit/cost.
-- `Alert` untuk masalah prasyarat.
-- `Button` dan `Spinner` untuk action kalkulasi.
-- `Empty` untuk kondisi tanpa hasil atau riwayat.
-- `Skeleton` untuk loading placeholder bila dibutuhkan.
-- `svelte-sonner` untuk feedback action.
-
-Tidak perlu menambah chart, data table interaktif, dialog metadata, atau dependency UI baru pada
-tahap awal.
-
-### 6.7 Status Implementasi UI Mock
-
-Selesai:
-
-- [x] Tambahkan fixture server statis berisi 5 alternatives dan 7 criteria.
-- [x] Tampilkan header, readiness badge, metadata run terbaru, dan simulasi tombol kalkulasi.
-- [x] Tampilkan tab `Hasil & Peringkat` dengan ranking, benefit, cost, dan optimization score.
-- [x] Tampilkan tab `Rincian Perhitungan` dengan Stepper untuk matriks keputusan, normalisasi,
-      normalisasi terbobot, dan nilai optimasi.
-- [x] Tambahkan ikon, deskripsi, direct navigation, serta tombol previous/next pada Stepper.
-- [x] Tampilkan kode, nama, unit, bobot, tipe benefit/cost, raw label, nilai pembagi normalisasi, dan
-      angka sampai 6 desimal pada matrix.
-- [x] Gunakan horizontal scroll, sticky alternative column, semantic color, table caption, dan
-      keyboard-accessible controls.
-- [x] Verifikasi Svelte autofixer, type check, ESLint, dan test suite.
-
-Tersisa:
-
-- [ ] Ganti fixture dan simulasi kalkulasi dengan load/action backend nyata.
-- [ ] Ganti badge `Mock data` setelah hasil berasal dari calculation run tersimpan.
-- [ ] Tampilkan alert readiness, empty state, error state, dan loading state berbasis data nyata.
-- [ ] Tambahkan tautan serta halaman daftar dan detail riwayat.
-- [ ] Gunakan istilah `Nilai pembagi normalisasi` menggantikan label `Denominator` pada UI.
-- [ ] Ekstrak tampilan hasil menjadi komponen bersama hanya saat detail riwayat membutuhkannya.
-
-## 7. Kriteria Selesai
-
-- Kalkulasi ditolak saat decision matrix belum lengkap.
-- Score dapat dihitung ulang secara deterministik dari input run yang sama.
+- Kalkulasi ditolak saat decision matrix belum lengkap atau tidak valid.
 - Criteria benefit menambah score dan criteria cost mengurangi score.
-- Ranking tersimpan unik dalam setiap calculation run.
 - Score seri menghasilkan ranking deterministik berdasarkan kode alternative.
-- Seluruh run, results, dan details tersimpan atomik.
-- Kegagalan menyimpan result atau detail tidak meninggalkan calculation run parsial.
-- Alternative yang sudah digunakan dalam histori tidak dapat dihapus permanen.
-- Perubahan data master tidak mengubah identitas alternative atau criterion pada snapshot lama.
-- Admin dapat melihat hasil terbaru melalui Tabs dan seluruh tahap perhitungan melalui Stepper.
-- Admin dapat membuka daftar riwayat dan membaca snapshot setiap run tanpa menghitung ulang.
-- Halaman tetap dapat digunakan pada desktop dan mobile, termasuk table matrix yang dapat digulir.
+- Run, results, dan details tersimpan dalam satu transaction.
+- Results dan details disimpan secara bulk.
+- Setiap result menyimpan snapshot kode dan nama alternative.
+- Setiap detail menyimpan snapshot metadata criterion dan label value.
+- Alternative atau criterion yang sudah digunakan tidak dapat dihapus permanen.
+- Halaman utama tidak lagi menggunakan fixture atau simulasi kalkulasi.
+- Admin dapat menjalankan kalkulasi dan mengaudit empat tahap perhitungan.
+- Halaman tetap dapat digunakan pada desktop dan mobile.
 
-## 8. Urutan Implementasi
+## 13. Pekerjaan Lanjutan
 
-1. [x] Buat mock UI menggunakan kontrak snapshot final.
-2. Tambahkan kolom snapshot alternative dan criterion pada calculation results/details.
-3. Implement kontrak, validasi, dan pure calculation service MOORA.
-4. Tambah unit test rumus, benefit/cost, nilai pembagi nol, dan ranking seri.
-5. Implement transaction persistence beserta bulk insert results/details.
-6. Tambah test rollback penyimpanan dan snapshot setelah master berubah.
-7. Implement action kalkulasi dan load hasil terbaru.
-8. Tambah guard serta test penghapusan alternative yang sudah memiliki histori.
-9. Implement backend dan UI daftar riwayat serta detail snapshot run.
-10. Hubungkan hasil nyata ke Tabs dan empat tahap Stepper.
-11. Verifikasi responsive layout, keyboard navigation, dark mode, dan state kosong/error.
-
-## 9. Di Luar Cakupan Awal
-
-- Perbandingan interaktif antar-run.
-- Export PDF atau spreadsheet.
-- Penjadwalan kalkulasi otomatis.
-- Metode SPK selain MOORA.
-- Chart hasil atau podium ranking.
-- Dialog untuk mengisi nama dan catatan run.
-- Sinkronisasi Tabs atau Stepper ke URL.
+Route dan UI riwayat akan direncanakan dalam `moora-calculation-history-roadmap.md` setelah roadmap
+ini selesai. Roadmap tersebut nantinya membahas backend list/detail run, pagination, snapshot detail,
+status `404`, frontend daftar/detail, navigasi, dan ekstraksi komponen bersama.
