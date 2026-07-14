@@ -16,7 +16,8 @@
 		update: 'Edit',
 		scales: 'Nilai kriteria skala',
 		'alternative-values': 'Nilai alternatif',
-		'moora-calculation': 'Perhitungan MOORA'
+		'moora-calculation': 'Perhitungan MOORA',
+		'calculation-history': 'Riwayat Perhitungan'
 	};
 
 	const breadcrumbs = $derived.by(() => {

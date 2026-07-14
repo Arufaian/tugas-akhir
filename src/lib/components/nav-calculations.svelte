@@ -3,20 +3,37 @@
 	import { resolve } from '$app/paths';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import CalculatorIcon from '@lucide/svelte/icons/calculator';
+	import HistoryIcon from '@lucide/svelte/icons/history';
 
-	const url = resolve('/admin/moora-calculation');
+	const calculationUrl = resolve('/admin/moora-calculation');
+	const historyUrl = resolve('/admin/calculation-history');
 </script>
 
 <Sidebar.Group>
 	<Sidebar.GroupLabel>Perhitungan</Sidebar.GroupLabel>
 	<Sidebar.Menu>
 		<Sidebar.MenuItem>
-			<!-- ponytail: one calculation route does not need configurable menu data. -->
-			<Sidebar.MenuButton isActive={page.url.pathname === url} tooltipContent="MOORA Calculation">
+			<Sidebar.MenuButton
+				isActive={page.url.pathname === calculationUrl}
+				tooltipContent="Perhitungan MOORA"
+			>
 				{#snippet child({ props })}
-					<a href={url} {...props}>
+					<a href={calculationUrl} {...props}>
 						<CalculatorIcon />
-						<span>MOORA Calculation</span>
+						<span>Perhitungan MOORA</span>
+					</a>
+				{/snippet}
+			</Sidebar.MenuButton>
+		</Sidebar.MenuItem>
+		<Sidebar.MenuItem>
+			<Sidebar.MenuButton
+				isActive={page.url.pathname.startsWith(historyUrl)}
+				tooltipContent="Riwayat Perhitungan"
+			>
+				{#snippet child({ props })}
+					<a href={historyUrl} {...props}>
+						<HistoryIcon />
+						<span>Riwayat Perhitungan</span>
 					</a>
 				{/snippet}
 			</Sidebar.MenuButton>

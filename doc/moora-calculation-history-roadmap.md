@@ -76,6 +76,63 @@ terbaru.
   sama.
 - Pastikan table dan kontrol navigasi tetap dapat digunakan pada desktop dan mobile.
 
+### 6.1 Arah Tampilan
+
+Halaman daftar menggunakan pola audit workspace yang ringkas, bukan dashboard baru:
+
+- Header berisi judul, deskripsi, dan tombol menuju halaman kalkulasi MOORA.
+- Satu `Card` berisi `Table` calculation run dengan kolom nama dan waktu, pembuat, jumlah data,
+  serta aksi menuju detail.
+- Nama dan waktu ditempatkan dalam satu kolom agar table tetap ringkas.
+- Pagination ditempatkan di bawah table dan tetap menggunakan query parameter `page`.
+- Pada mobile, table menggunakan horizontal scroll yang sudah disediakan oleh `Table.Root`.
+- Empty state mengarahkan admin ke halaman kalkulasi untuk membuat run pertama.
+
+Halaman detail mempertahankan pola hasil pada halaman kalkulasi utama:
+
+- Navigasi kembali menuju daftar riwayat.
+- Header dan `Card` metadata menampilkan nama run, waktu, pembuat, jumlah alternative, dan jumlah
+  criteria.
+- `Tabs` memisahkan hasil peringkat dan rincian perhitungan.
+- `Stepper` menampilkan decision matrix, normalisasi, pembobotan, dan optimasi.
+- Nilai perhitungan menggunakan angka tabular dan matrix mempertahankan kolom alternative yang
+  sticky pada layar sempit.
+- Ekstrak tampilan hasil bersama hanya ketika halaman kalkulasi utama dan detail memakai kontrak dan
+  markup yang benar-benar sama.
+
+Tidak perlu menambah chart, kartu terpisah untuk setiap run, pencarian, filter, dialog metadata, atau
+animasi khusus.
+
+### 6.2 Komponen UI
+
+Komponen yang sudah tersedia dan digunakan:
+
+- `Card` untuk metadata dan wadah table.
+- `Table` untuk daftar run, ranking, dan matrix.
+- `Badge` untuk rank, kode alternative, dan tipe criterion.
+- `Button` untuk navigasi dan aksi.
+- `Empty` untuk kondisi tanpa run dan `404`.
+- `Alert` untuk database error dengan pesan generik.
+- `Tabs` dan `Stepper` untuk audit tahapan perhitungan.
+- `Pagination` untuk navigasi halaman daftar.
+- `BackLinkButton` untuk kembali dari detail.
+- `Breadcrumb` dan `Sidebar` untuk navigasi admin.
+
+Loading navigasi sudah ditangani oleh `src/lib/components/loading-overlay.svelte`. Tidak perlu memakai
+`DataTable` karena daftar tidak memiliki sorting, pencarian, filter, atau pagination client-side.
+
+### 6.3 Implementasi Mock Terlebih Dahulu
+
+UI daftar dan detail dibuat menggunakan mock data sebelum dihubungkan ke query database.
+
+- Bentuk mock harus sama dengan kontrak data final dari `load()` daftar dan detail.
+- Mock mencakup daftar berisi data, pagination lebih dari satu halaman, detail lengkap, dan empty
+  state.
+- Gunakan UUID stabil pada mock agar link daftar ke detail dapat diuji.
+- Jangan menambahkan timeout buatan, repository mock, dependency, atau abstraction khusus mock.
+- Setelah UI disetujui, ganti sumber mock dengan query server tanpa mengubah struktur utama UI.
+- State `404` dan database error diterapkan saat route server dihubungkan ke database.
+
 ## 7. Tests
 
 Test minimum mencakup:
@@ -90,14 +147,16 @@ Test minimum mencakup:
 
 ## 8. Urutan Implementasi
 
-1. [ ] Tetapkan kontrak data daftar dan detail.
-2. [ ] Implement query daftar dan pagination.
-3. [ ] Implement UI daftar riwayat.
-4. [ ] Implement query detail dan penanganan `404`.
-5. [ ] Implement UI detail snapshot.
-6. [ ] Tambahkan navigasi halaman kalkulasi dan riwayat.
-7. [ ] Tambahkan tests.
-8. [ ] Jalankan type check, lint, test, dan pemeriksaan responsive UI.
+1. [x] Tetapkan kontrak data daftar dan detail.
+2. [x] Buat mock data yang mengikuti kontrak final.
+3. [x] Implement UI daftar, pagination, dan empty state menggunakan mock data.
+4. [x] Implement UI detail metadata, ranking, dan tahapan snapshot menggunakan mock data.
+5. [x] Periksa responsive UI daftar dan detail.
+6. [ ] Implement query daftar dan pagination lalu ganti sumber mock.
+7. [ ] Implement query detail, snapshot mapping, dan penanganan `404`.
+8. [x] Tambahkan navigasi halaman kalkulasi dan riwayat.
+9. [ ] Tambahkan tests.
+10. [ ] Jalankan type check, lint, test, dan pemeriksaan responsive UI akhir.
 
 ## 9. Kriteria Selesai
 
