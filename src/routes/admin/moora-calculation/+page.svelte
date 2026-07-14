@@ -152,7 +152,7 @@
 	</header>
 
 	{#if !data.readiness.isReady}
-		<Alert.Root variant="destructive">
+		<Alert.Root variant="destructive" class="pr-4 sm:pr-18">
 			<OctagonAlert />
 			<Alert.Title>Data belum siap dihitung</Alert.Title>
 			<Alert.Description>
@@ -162,7 +162,9 @@
 					{/each}
 				</ul>
 			</Alert.Description>
-			<Alert.Action>
+			<Alert.Action
+				class="static col-start-2 mt-2 justify-self-start sm:absolute sm:top-2.5 sm:right-3 sm:mt-0"
+			>
 				<Button href="/admin/alternative-values" variant="outline" size="sm">Lengkapi data</Button>
 			</Alert.Action>
 		</Alert.Root>
@@ -192,14 +194,16 @@
 		</Card.Root>
 
 		<Tabs.Root bind:value={activeTab}>
-			<Tabs.List variant="line" class="w-full">
-				<Tabs.Trigger value="results">
+			<Tabs.List variant="line" class="grid w-full grid-cols-2 group-data-horizontal/tabs:h-auto">
+				<Tabs.Trigger value="results" class="min-w-0 px-1.5 sm:px-2">
 					<Trophy data-icon="inline-start" />
-					Hasil & Peringkat
+					<span class="md:hidden">Peringkat</span>
+					<span class="hidden md:inline">Hasil & Peringkat</span>
 				</Tabs.Trigger>
-				<Tabs.Trigger value="details">
+				<Tabs.Trigger value="details" class="min-w-0 px-1.5 sm:px-2">
 					<ListChecks data-icon="inline-start" />
-					Rincian Perhitungan
+					<span class="md:hidden">Rincian</span>
+					<span class="hidden md:inline">Rincian Perhitungan</span>
 				</Tabs.Trigger>
 			</Tabs.List>
 
@@ -267,7 +271,7 @@
 							Ikuti transformasi nilai dari matriks keputusan sampai nilai optimasi.
 						</Card.Description>
 					</Card.Header>
-					<Card.Content class="flex min-w-0 flex-col gap-6">
+					<Card.Content class="flex min-w-0 flex-col gap-6 px-3 sm:px-6">
 						<Stepper.Root bind:step>
 							<Stepper.Nav
 								orientation="horizontal"
@@ -309,8 +313,11 @@
 											</Table.Caption>
 											<Table.Header>
 												<Table.Row>
-													<Table.Head class="sticky left-0 min-w-56 bg-card ps-4">
-														Alternatif
+													<Table.Head
+														class="sticky left-0 z-20 w-20 max-w-20 min-w-20 bg-card px-2 text-center md:w-56 md:max-w-56 md:min-w-56 md:ps-4"
+													>
+														<span class=" md:hidden">Alt.</span>
+														<span class="hidden md:inline">Alternatif</span>
 													</Table.Head>
 													{#each data.criteria as criterion (criterion.id)}
 														<Table.Head class="min-w-32 text-right align-top">
@@ -337,10 +344,16 @@
 													{@const alternative = alternativesById.get(row.alternativeId)}
 													{#if alternative}
 														<Table.Row>
-															<Table.Cell class="sticky left-0 bg-card ps-4">
-																<div class="flex items-center gap-2">
+															<Table.Cell
+																class="sticky left-0 z-10 w-20 max-w-20 min-w-20 bg-card px-2 md:w-56 md:max-w-56 md:min-w-56 md:ps-4"
+															>
+																<div
+																	class="flex items-center justify-center gap-2 md:justify-start"
+																>
 																	<Badge variant="secondary">{alternative.code}</Badge>
-																	<span class="font-medium">{alternative.name}</span>
+																	<span class="hidden truncate font-medium md:inline">
+																		{alternative.name}
+																	</span>
 																</div>
 															</Table.Cell>
 															{#each data.criteria as criterion, criterionIndex (criterion.id)}
@@ -371,8 +384,11 @@
 											{#if step === 2}
 												<Table.Footer>
 													<Table.Row>
-														<Table.Cell class="sticky left-0 bg-muted ps-4 font-medium">
-															Nilai pembagi normalisasi
+														<Table.Cell
+															class="sticky left-0 z-10 w-20 max-w-20 min-w-20 bg-muted px-2 font-medium md:w-56 md:max-w-56 md:min-w-56 md:ps-4"
+														>
+															<span class="md:hidden">Pembagi</span>
+															<span class="hidden md:inline">Nilai pembagi normalisasi</span>
 														</Table.Cell>
 														{#each data.criteria as criterion (criterion.id)}
 															<Table.Cell class="text-right font-mono tabular-nums">
@@ -430,15 +446,23 @@
 
 								<div class="flex items-center justify-between gap-3">
 									<Stepper.Previous>
-										<ArrowLeft data-icon="inline-start" />
-										Sebelumnya
+										{#snippet child({ props })}
+											<Button {...props} class="size-10 px-0 md:h-9 md:w-auto md:px-2.5">
+												<ArrowLeft data-icon="inline-start" />
+												<span class="sr-only md:not-sr-only md:inline">Sebelumnya</span>
+											</Button>
+										{/snippet}
 									</Stepper.Previous>
 									<span class="text-xs text-muted-foreground"
 										>Tahap {step} dari {stages.length}</span
 									>
 									<Stepper.Next>
-										Selanjutnya
-										<ArrowRight data-icon="inline-end" />
+										{#snippet child({ props })}
+											<Button {...props} class="size-10 px-0 md:h-9 md:w-auto md:px-2.5">
+												<span class="sr-only md:not-sr-only md:inline">Selanjutnya</span>
+												<ArrowRight data-icon="inline-end" />
+											</Button>
+										{/snippet}
 									</Stepper.Next>
 								</div>
 							</section>

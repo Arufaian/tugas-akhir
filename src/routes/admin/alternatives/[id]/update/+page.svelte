@@ -29,6 +29,7 @@
 
 	const supabase = page.data.supabase;
 	let formSubmitted = $state(false);
+	let isRemovingFile = $state(false);
 
 	const initialForm = () => data.form;
 	const form = superForm(initialForm(), {
@@ -146,8 +147,10 @@
 	const removeFile = async (index: number) => {
 		const file = files[index];
 		if (!file) return;
+		if ($submitting || isRemovingFile) return;
 		if (file.isTemporary) {
 			if (!supabase) return;
+			isRemovingFile = true;
 
 			try {
 				const { error } = await supabase.storage.from('tugas-akhir').remove([file.storagePath]);
@@ -156,6 +159,8 @@
 				toast.error('Gagal menghapus gambar');
 				console.error(err);
 				return;
+			} finally {
+				isRemovingFile = false;
 			}
 		}
 
@@ -165,7 +170,8 @@
 	};
 
 	onDestroy(() => {
-		if (formSubmitted) return;
+		// ponytail: an in-flight request may already have committed; prefer a possible orphan.
+		if (formSubmitted || $submitting) return;
 		if (!supabase) return;
 
 		void Promise.allSettled(
@@ -255,7 +261,12 @@
 									>
 								</div>
 							</div>
-							<Button variant="outline" size="icon" onclick={() => removeFile(i)}>
+							<Button
+								variant="outline"
+								size="icon"
+								disabled={$submitting || isRemovingFile}
+								onclick={() => removeFile(i)}
+							>
 								<XIcon />
 							</Button>
 						</div>
@@ -278,7 +289,7 @@
 
 			<div class="flex justify-end gap-2">
 				<Button href={resolve('/admin/alternatives')} variant="outline">Batal</Button>
-				<Form.Button disabled={$submitting}>
+				<Form.Button disabled={$submitting || isRemovingFile}>
 					{#if $submitting}
 						<Spinner />
 						Menyimpan...
