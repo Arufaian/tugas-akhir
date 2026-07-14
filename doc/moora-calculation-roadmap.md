@@ -28,8 +28,8 @@ Termasuk:
 
 Tidak termasuk:
 
-- Route `/admin/moora-calculation/history`.
-- Route `/admin/moora-calculation/history/[id]`.
+- Route `/admin/calculation-history`.
+- Route `/admin/calculation-history/[id]`.
 - Pagination calculation runs.
 - UI daftar dan detail riwayat.
 - Perbandingan antar-run.
