@@ -2,16 +2,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { actions, load } from './+page.server.js';
 
-const { mockSelect, mockCalculateMoora, mockCreateMooraCalculation } = vi.hoisted(() => ({
-	mockSelect: vi.fn(),
-	mockCalculateMoora: vi.fn(),
-	mockCreateMooraCalculation: vi.fn()
-}));
+const { mockSelect, mockCalculateMoora, mockCreateMooraCalculation, mockGetLatestRun } = vi.hoisted(
+	() => ({
+		mockSelect: vi.fn(),
+		mockCalculateMoora: vi.fn(),
+		mockCreateMooraCalculation: vi.fn(),
+		mockGetLatestRun: vi.fn()
+	})
+);
 
 vi.mock('$lib/server/db/index.js', () => ({ db: { select: mockSelect } }));
 vi.mock('$lib/server/services/moora.js', () => ({ calculateMoora: mockCalculateMoora }));
 vi.mock('$lib/server/services/moora-persistence.js', () => ({
 	createMooraCalculation: mockCreateMooraCalculation
+}));
+vi.mock('$lib/server/services/moora-history.js', () => ({
+	getLatestCalculationRun: mockGetLatestRun
 }));
 
 function activeQuery(rows: unknown[]) {
@@ -24,18 +30,6 @@ function rowsQuery(rows: unknown[]) {
 
 function filteredQuery(rows: unknown[]) {
 	return { from: () => ({ where: async () => rows }) };
-}
-
-function latestRunQuery(rows: unknown[]) {
-	return {
-		from: () => ({
-			leftJoin: () => ({ orderBy: () => ({ limit: async () => rows }) })
-		})
-	};
-}
-
-function runRowsQuery(rows: unknown[]) {
-	return { from: () => ({ where: () => ({ orderBy: async () => rows }) }) };
 }
 
 function setupReadiness() {
@@ -86,7 +80,7 @@ describe('MOORA calculation page load', () => {
 
 	it('returns readiness issues and an empty state without a saved run', async () => {
 		setupReadiness();
-		mockSelect.mockReturnValueOnce(latestRunQuery([]));
+		mockGetLatestRun.mockResolvedValue(null);
 		mockCalculateMoora.mockReturnValue({
 			success: false,
 			issues: ['Decision matrix belum lengkap']
@@ -104,65 +98,57 @@ describe('MOORA calculation page load', () => {
 		});
 	});
 
-	it('maps the latest persisted snapshot to the UI contract', async () => {
+	it('returns the latest persisted snapshot from the history service', async () => {
 		setupReadiness();
 		mockCalculateMoora.mockReturnValue({ success: true });
-		mockSelect
-			.mockReturnValueOnce(
-				latestRunQuery([
-					{
-						id: 'run-1',
-						name: 'Perhitungan Test',
-						createdAt: new Date('2026-07-14T08:00:00.000Z'),
-						createdByName: 'Admin Test',
-						alternativeCount: 1,
-						criteriaCount: 1
-					}
-				])
-			)
-			.mockReturnValueOnce(
-				runRowsQuery([
-					{
-						alternativeId: 'a1',
-						alternativeCode: 'A1',
-						alternativeName: 'Snapshot Alternative',
-						totalBenefit: '1.000000000',
-						totalCost: '0.000000000',
-						optimizationScore: '1.000000000',
-						rank: 1
-					}
-				])
-			)
-			.mockReturnValueOnce(
-				runRowsQuery([
-					{
-						alternativeId: 'a1',
-						criterionId: 'c1',
-						criterionCode: 'C1',
-						criterionName: 'Snapshot Criterion',
-						criterionUnit: 'poin',
-						criterionOrderIndex: 1,
-						criterionType: 'benefit',
-						rawValue: '10.0000',
-						labelValue: null,
-						denominator: '10.000000000',
-						weight: '1.000000000',
-						normalizedValue: '1.000000000',
-						weightedValue: '1.000000000'
-					}
-				])
-			);
+		mockGetLatestRun.mockResolvedValue({
+			run: {
+				id: 'run-1',
+				name: 'Perhitungan Test',
+				createdAt: new Date('2026-07-14T08:00:00.000Z'),
+				createdByName: 'Admin Test',
+				alternativeCount: 1,
+				criteriaCount: 1
+			},
+			alternatives: [{ id: 'a1', code: 'A1', name: 'Snapshot Alternative' }],
+			criteria: [
+				{
+					id: 'c1',
+					code: 'C1',
+					name: 'Snapshot Criterion',
+					unit: 'poin',
+					type: 'benefit',
+					weight: 1,
+					denominator: 10
+				}
+			],
+			matrixRows: [
+				{
+					alternativeId: 'a1',
+					raw: [10],
+					labels: [null],
+					normalized: [1],
+					weighted: [1]
+				}
+			],
+			results: [
+				{
+					alternativeId: 'a1',
+					totalBenefit: 1,
+					totalCost: 0,
+					optimizationScore: 1,
+					rank: 1
+				}
+			]
+		});
 
 		const result = await load({} as Parameters<typeof load>[0]);
 
 		expect(result).toBeDefined();
 		if (!result) throw new Error('Expected page data');
 		expect(result.readiness).toEqual({ isReady: true, issues: [] });
-		expect(result.run).toMatchObject({
-			id: 'run-1',
-			name: 'Perhitungan Test',
-			createdByName: 'Admin Test'
-		});
+		expect(mockGetLatestRun).toHaveBeenCalledOnce();
+		expect(result.run).toMatchObject({ id: 'run-1', name: 'Perhitungan Test' });
 		expect(result.alternatives).toEqual([{ id: 'a1', code: 'A1', name: 'Snapshot Alternative' }]);
 		expect(result.criteria).toEqual([
 			{

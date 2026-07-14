@@ -41,6 +41,10 @@ Versi awal menggunakan schema yang sudah ada:
 Tidak perlu menambah table atau dependency baru. Kebutuhan index database dievaluasi setelah bentuk
 query pagination ditetapkan.
 
+Database remote saat perencanaan backend sudah memiliki calculation run beserta result dan detail.
+Schema snapshot yang tersedia sudah cukup untuk kontrak UI sehingga implementasi backend tidak
+memerlukan perubahan kolom atau table.
+
 ## 4. Halaman Daftar
 
 `/admin/calculation-history` menampilkan:
@@ -54,6 +58,18 @@ query pagination ditetapkan.
 
 Gunakan komponen yang sudah tersedia seperti `Card`, `Table`, `Badge`, `Button`, dan `Empty`.
 
+### 4.1 Query dan Pagination
+
+- Validasi query parameter `page` sebagai integer positif dan gunakan halaman pertama untuk nilai
+  yang tidak valid.
+- Gunakan page size tetap sebanyak 10 run.
+- Hitung total run terlebih dahulu, lalu batasi halaman aktif agar tidak melebihi total halaman.
+- Ambil data menggunakan `limit` dan `offset`.
+- Urutkan secara deterministik dengan `created_at DESC` lalu `id DESC`.
+- Gunakan `left join` ke profile agar run tetap tampil ketika profile pembuat tidak tersedia.
+- Gunakan label netral ketika nama pembuat tidak tersedia.
+- Pesan database error harus generik dan tidak boleh menyertakan detail internal.
+
 ## 5. Halaman Detail
 
 `/admin/calculation-history/[id]`:
@@ -66,6 +82,37 @@ Gunakan komponen yang sudah tersedia seperti `Card`, `Table`, `Badge`, `Button`,
 
 Detail tidak boleh membaca ulang nama alternative, metadata criterion, atau label dari master data
 terbaru.
+
+### 5.1 Read Service dan Snapshot Mapping
+
+Buat satu read service sederhana di `src/lib/server/services/moora-history.ts`. Service menangani:
+
+- Query daftar run dan metadata pagination.
+- Query run terbaru untuk halaman kalkulasi utama.
+- Query satu run berdasarkan id untuk halaman detail.
+- Pembacaan calculation results dan calculation details berdasarkan run id.
+- Konversi seluruh numeric Drizzle menjadi `number`.
+- Mapping criteria, alternatives, matrix rows, dan ranking ke kontrak UI.
+
+Mapping snapshot yang saat ini berada di `src/routes/admin/moora-calculation/+page.server.ts`
+dipindahkan ke service tersebut agar halaman kalkulasi utama dan detail riwayat tidak memiliki dua
+implementasi mapping. Tidak perlu menambah repository layer, class, RPC, view, atau dependency baru.
+
+Route detail tetap bertanggung jawab untuk validasi UUID dan status HTTP:
+
+- UUID tidak valid menghasilkan `404` tanpa menjalankan query database.
+- Run yang tidak ditemukan menghasilkan `404`.
+- Database error menghasilkan `500` dengan pesan generik.
+
+### 5.2 Penggantian Mock
+
+Setelah query backend siap:
+
+- Ganti sumber data pada kedua `+page.server.ts` dengan read service.
+- Hapus `mock-data.ts` dan query preview `?mock=empty`.
+- Pertahankan kontrak props dan markup halaman yang sudah disetujui.
+- Empty state berasal dari hasil query database yang tidak memiliki run.
+- Ubah test mock menjadi test query, pagination, mapping, dan error handling.
 
 ## 6. UI dan Navigasi
 
@@ -133,6 +180,15 @@ UI daftar dan detail dibuat menggunakan mock data sebelum dihubungkan ke query d
 - Setelah UI disetujui, ganti sumber mock dengan query server tanpa mengubah struktur utama UI.
 - State `404` dan database error diterapkan saat route server dihubungkan ke database.
 
+### 6.4 Keputusan Index
+
+Index unik yang sudah tersedia pada calculation results dan calculation details telah mencakup kolom
+awal `calculation_run_id`, sehingga lookup snapshot per run tidak memerlukan index baru.
+
+Index pagination `calculation_runs(created_at, id)` belum ditambahkan karena jumlah run masih kecil
+dan belum ada hasil `EXPLAIN` yang menunjukkan kebutuhan nyata. Evaluasi kembali index setelah volume
+run bertambah atau query list menunjukkan sequential scan dan sort yang terukur.
+
 ## 7. Tests
 
 Test minimum mencakup:
@@ -152,11 +208,15 @@ Test minimum mencakup:
 3. [x] Implement UI daftar, pagination, dan empty state menggunakan mock data.
 4. [x] Implement UI detail metadata, ranking, dan tahapan snapshot menggunakan mock data.
 5. [x] Periksa responsive UI daftar dan detail.
-6. [ ] Implement query daftar dan pagination lalu ganti sumber mock.
-7. [ ] Implement query detail, snapshot mapping, dan penanganan `404`.
-8. [x] Tambahkan navigasi halaman kalkulasi dan riwayat.
-9. [ ] Tambahkan tests.
-10. [ ] Jalankan type check, lint, test, dan pemeriksaan responsive UI akhir.
+6. [x] Buat read service dan pindahkan snapshot mapping dari halaman kalkulasi utama.
+7. [x] Implement query daftar, count, pagination, dan fallback pembuat.
+8. [x] Implement query detail dan penanganan UUID, `404`, serta database error.
+9. [x] Ganti sumber mock pada route daftar dan detail lalu hapus fixture mock.
+10. [x] Tambahkan tests untuk query, pagination, mapping, numeric conversion, dan error handling.
+11. [x] Verifikasi dengan data database, type check, lint, test, build, dan database advisors.
+12. [x] Evaluasi index pagination menggunakan volume data dan query plan.
+
+Navigasi halaman kalkulasi dan riwayat sudah diselesaikan pada fase UI mock.
 
 ## 9. Kriteria Selesai
 

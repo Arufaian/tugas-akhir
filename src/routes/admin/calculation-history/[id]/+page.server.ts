@@ -1,13 +1,20 @@
 import { error } from '@sveltejs/kit';
 import { z } from 'zod';
 
-import type { PageServerLoad } from './$types.js';
-import { getMockCalculationRun } from '../mock-data.js';
+import { getCalculationRun } from '$lib/server/services/moora-history.js';
 
-export const load: PageServerLoad = ({ params }) => {
+import type { PageServerLoad } from './$types.js';
+
+export const load: PageServerLoad = async ({ params }) => {
 	if (!z.uuid().safeParse(params.id).success) error(404, 'Riwayat perhitungan tidak ditemukan');
 
-	const detail = getMockCalculationRun(params.id);
+	let detail;
+	try {
+		detail = await getCalculationRun(params.id);
+	} catch {
+		error(500, 'Riwayat perhitungan gagal dimuat');
+	}
+
 	if (!detail) error(404, 'Riwayat perhitungan tidak ditemukan');
 
 	return detail;
