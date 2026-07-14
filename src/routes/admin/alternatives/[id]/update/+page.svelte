@@ -68,6 +68,7 @@
 		uploadedAt: number;
 		url: string;
 		storagePath: string;
+		isTemporary: boolean;
 	};
 
 	let files = $state<UploadedFile[]>([]);
@@ -84,7 +85,8 @@
 						size: 0,
 						uploadedAt: Date.now(),
 						url: parsed.url,
-						storagePath: parsed.path ?? ''
+						storagePath: parsed.path ?? '',
+						isTemporary: false
 					}
 				];
 			}
@@ -130,7 +132,8 @@
 			size: file.size,
 			uploadedAt: Date.now(),
 			url: urlData.publicUrl,
-			storagePath: uploadData.path
+			storagePath: uploadData.path,
+			isTemporary: true
 		});
 
 		$formData.img = JSON.stringify({
@@ -143,35 +146,33 @@
 	const removeFile = async (index: number) => {
 		const file = files[index];
 		if (!file) return;
-		if (!supabase) return;
+		if (file.isTemporary) {
+			if (!supabase) return;
 
-		try {
-			const { error } = await supabase.storage.from('tugas-akhir').remove([file.storagePath]);
-			toast.success(`${file.name} berhasil dihapus`);
-			if (error) throw error;
-		} catch (err) {
-			toast.error('Gagal menghapus gambar');
-			console.error(err);
-			return;
+			try {
+				const { error } = await supabase.storage.from('tugas-akhir').remove([file.storagePath]);
+				if (error) throw error;
+			} catch (err) {
+				toast.error('Gagal menghapus gambar');
+				console.error(err);
+				return;
+			}
 		}
 
 		files = [...files.slice(0, index), ...files.slice(index + 1)];
 		$formData.img = '';
+		toast.success(`${file.name} berhasil dihapus`);
 	};
 
-	onDestroy(async () => {
+	onDestroy(() => {
 		if (formSubmitted) return;
-		if (!supabase || files.length === 0) return;
+		if (!supabase) return;
 
-		for (const file of files) {
-			try {
-				await supabase.storage.from('tugas-akhir').remove([file.storagePath]);
-			} catch {
-				// cleanup failure is non-critical
-			}
-		}
-
-		files = [];
+		void Promise.allSettled(
+			files
+				.filter((file) => file.isTemporary)
+				.map((file) => supabase.storage.from('tugas-akhir').remove([file.storagePath]))
+		);
 	});
 </script>
 

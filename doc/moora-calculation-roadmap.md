@@ -332,7 +332,7 @@ Test mencakup:
 8. [x] Implement `load()` dan action `calculate`.
 9. [x] Hubungkan data nyata ke Tabs dan Stepper.
 10. [x] Implement state readiness, empty, loading, success, dan error.
-11. [ ] Implement guard penghapusan alternative beserta test.
+11. [x] Implement guard penghapusan alternative beserta test.
 12. [ ] Jalankan type check, lint, test, dan pemeriksaan responsive UI.
 
 ## 12. Kriteria Selesai
