@@ -44,6 +44,7 @@
 		filterColumn?: string;
 		filterPlaceholder?: string;
 		facetedFilters?: FacetedFilterConfig[];
+		emptyMessage?: string;
 	};
 
 	let {
@@ -51,7 +52,8 @@
 		columns,
 		filterColumn = undefined,
 		filterPlaceholder = 'Filter...',
-		facetedFilters = []
+		facetedFilters = [],
+		emptyMessage = 'No results.'
 	}: DataTableProps<TData, TValue> = $props();
 	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 10 });
 	let sorting = $state<SortingState>([]);
@@ -73,7 +75,9 @@
 		get data() {
 			return data;
 		},
-		columns,
+		get columns() {
+			return columns;
+		},
 		getCoreRowModel: getCoreRowModel(),
 		getPaginationRowModel: getPaginationRowModel(),
 		getSortedRowModel: getSortedRowModel(),
@@ -169,7 +173,7 @@
 		<DropdownMenu.Root>
 			<DropdownMenu.Trigger>
 				{#snippet child({ props })}
-					<Button {...props} variant="outline">
+					<Button {...props} variant="outline" class="sm:ml-auto">
 						<Settings_2 />View
 					</Button>
 				{/snippet}
@@ -216,7 +220,9 @@
 					</Table.Row>
 				{:else}
 					<Table.Row>
-						<Table.Cell colspan={columns.length} class="h-24 text-center">No results.</Table.Cell>
+						<Table.Cell colspan={columns.length} class="h-24 text-center">
+							{emptyMessage}
+						</Table.Cell>
 					</Table.Row>
 				{/each}
 			</Table.Body>
@@ -224,11 +230,13 @@
 	</div>
 
 	<div class="flex flex-col items-center gap-4 px-2 pt-4 sm:flex-row sm:justify-between">
-		<div class="text-sm text-muted-foreground">
-			{table.getFilteredSelectedRowModel().rows.length} of
-			{table.getFilteredRowModel().rows.length} row(s) selected.
-		</div>
-		<div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 lg:gap-x-8">
+		{#if table.getColumn('select')}
+			<div class="text-sm text-muted-foreground">
+				{table.getFilteredSelectedRowModel().rows.length} of
+				{table.getFilteredRowModel().rows.length} row(s) selected.
+			</div>
+		{/if}
+		<div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:ml-auto lg:gap-x-8">
 			<div class="flex items-center gap-2">
 				<p class="text-sm font-medium">Rows per page</p>
 				<Select.Root

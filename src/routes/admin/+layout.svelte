@@ -10,6 +10,7 @@
 	const breadcrumbLabels: Record<string, string> = {
 		admin: 'Admin',
 		dashboard: 'Dashboard',
+		users: 'Pengguna',
 		alternatives: 'Alternatif',
 		criteria: 'Kriteria',
 		create: 'Tambah',

@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { LayoutDashboard, Motorbike, ListCheck, ClipboardList } from '@lucide/svelte';
+	import { LayoutDashboard, Motorbike, ListCheck, ClipboardList, UsersRound } from '@lucide/svelte';
 
 	// akan dibuat sebuah constant ketika role sales mulai dikerjakan
 	const data = {
@@ -8,6 +8,11 @@
 				title: 'Dashboard',
 				url: '/admin/dashboard',
 				icon: LayoutDashboard
+			},
+			{
+				title: 'Users',
+				url: '/admin/users',
+				icon: UsersRound
 			},
 			{
 				title: 'Alternatives',
