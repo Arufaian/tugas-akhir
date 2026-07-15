@@ -4,7 +4,6 @@
 	import UserXIcon from '@lucide/svelte/icons/user-x';
 	import UsersRoundIcon from '@lucide/svelte/icons/users-round';
 
-	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { DataTable } from '$lib/components/ui/data-table/index.js';
@@ -34,10 +33,7 @@
 <div class="flex flex-col gap-4">
 	<div class="flex flex-wrap items-start justify-between gap-3">
 		<div>
-			<div class="flex items-center gap-2">
-				<h1 class="font-display text-2xl font-semibold tracking-tight">Pengguna</h1>
-				<Badge variant="secondary">Data mock</Badge>
-			</div>
+			<h1 class="font-display text-2xl font-semibold tracking-tight">Pengguna</h1>
 			<p class="text-sm text-muted-foreground">Kelola akun dan akses staf.</p>
 		</div>
 	</div>

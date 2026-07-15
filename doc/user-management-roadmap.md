@@ -36,11 +36,14 @@ Aturan wajib:
 Status login menggunakan fitur native Supabase:
 
 - Nonaktifkan dengan `auth.admin.updateUserById(userId, { ban_duration: '876000h' })`.
-- Aktifkan kembali dengan menghapus ban melalui nilai durasi unban yang didukung Supabase Auth.
+- Aktifkan kembali dengan `auth.admin.updateUserById(userId, { ban_duration: 'none' })`.
 - Status tabel diturunkan dari `banned_until`, bukan dari `profiles.is_active`, agar tidak ada dua
   sumber status yang dapat berbeda.
-- Token akses yang sudah diterbitkan dapat tetap berlaku sampai kedaluwarsa. Pemeriksaan session
-  aktif tambahan baru diperlukan jika pencabutan akses harus seketika.
+- User dianggap aktif jika `banned_until` kosong atau waktunya sudah lewat. Jangan menentukan status
+  hanya dari keberadaan field tersebut karena timestamp ban yang kedaluwarsa dapat tetap tersedia.
+- `profiles.is_active` tidak diperbarui oleh fitur ini.
+- Ban memblokir login dan refresh berikutnya. Token akses yang sudah diterbitkan dapat tetap berlaku
+  sampai kedaluwarsa, umumnya maksimal satu jam. Pencabutan akses seketika tidak termasuk scope.
 
 Referensi resmi:
 
@@ -51,8 +54,9 @@ Referensi resmi:
 
 ## 4. Kontrak Data
 
-`load()` mengambil maksimal 1.000 pengguna melalui `auth.admin.listUsers()` lalu menggabungkannya
-dengan `profiles` berdasarkan UUID.
+`load()` mengambil maksimal 1.000 pengguna melalui
+`auth.admin.listUsers({ page: 1, perPage: 1000 })` lalu menggabungkannya dengan `profiles` berdasarkan
+UUID. Parameter wajib ditulis eksplisit karena default Supabase hanya mengembalikan 50 pengguna.
 
 Row yang dikirim ke UI berisi:
 
@@ -70,10 +74,14 @@ type UserRow = {
 
 Nama dan role berasal dari `profiles`. Email, waktu pembuatan, dan status ban berasal dari Supabase
 Auth. Profile yang tidak ditemukan menggunakan nama metadata atau label netral tanpa menggagalkan
-seluruh halaman.
+seluruh halaman. Auth user tanpa email juga menggunakan label netral agar kontrak `UserRow.email`
+tetap berupa string. Role yang tidak tersedia menggunakan fallback `sales`, sesuai invariant trigger
+yang membuat semua akun setelah admin pertama sebagai sales. Tandai fallback ini dengan komentar
+`ponytail:` pada implementasi agar dapat diganti jika role domain bertambah.
 
 Batas 1.000 pengguna cukup untuk tahap sekarang. Tambahkan pagination server hanya ketika jumlah
-pengguna mendekati batas tersebut.
+pengguna mendekati batas tersebut. Jika `listUsers()` melaporkan `total` lebih besar daripada jumlah
+user yang dimuat, hentikan load dengan error generik agar summary tidak menampilkan total parsial.
 
 ## 5. Halaman dan Interaksi
 
@@ -164,20 +172,36 @@ Tidak perlu membuat komponen table baru khusus pengguna.
 ### 6.1 Load Daftar
 
 1. Ambil user yang sedang login untuk penanda `isCurrentUser`.
-2. Ambil daftar Auth users dari Supabase Admin API.
-3. Ambil seluruh profile yang ID-nya relevan.
-4. Gabungkan data dan urutkan dari pengguna terbaru.
-5. Hitung summary dari row yang sama agar tidak ada query count tambahan.
+2. Panggil `listUsers({ page: 1, perPage: 1000 })` dan hentikan proses jika Supabase mengembalikan
+   error.
+3. Bandingkan `data.total` dengan jumlah user yang dimuat dan hentikan load jika hasil terpotong.
+4. Ambil profile untuk ID Auth user yang dimuat. Jika daftar Auth user kosong, lewati query profile.
+5. Buat `Map` profile berdasarkan UUID lalu gabungkan data tanpa query per user.
+6. Gunakan fallback metadata atau label netral ketika profile atau email tidak tersedia, serta
+   fallback role `sales` ketika profile tidak tersedia.
+7. Tentukan `isActive` dengan membandingkan `banned_until` terhadap waktu sekarang.
+8. Urutkan secara deterministik berdasarkan `created_at DESC`, lalu `id DESC`.
+9. Hitung summary dari row yang sama agar tidak ada query count tambahan.
+10. Jika Supabase, database, atau guard batas pengguna gagal, gunakan
+    `throw error(500, 'Gagal memuat pengguna.')`; jangan mengirim payload parsial.
 
 ### 6.2 Tambah Pengguna
 
 Action `create`:
 
 1. Validasi request dengan schema registrasi existing.
-2. Panggil `auth.admin.createUser()` menggunakan email, password, `email_confirm: true`, dan
+2. Jika form invalid, kosongkan `form.data.password` dan `form.data.confirmPassword` sebelum
+   `fail(400, { form })`.
+3. Jika form valid, salin nama, email, dan password ke variabel lokal, lalu kosongkan kedua field
+   password pada `form.data` sebelum memanggil Supabase.
+4. Panggil `auth.admin.createUser()` menggunakan email, password, `email_confirm: true`, dan
    `user_metadata.full_name`.
-3. Trigger `private.handle_new_user()` yang sudah ada membuat profile dengan role `sales`.
-4. Return message sukses atau error yang aman.
+5. Trigger `private.handle_new_user()` yang sudah ada membuat profile dengan role `sales` karena
+   request hanya dapat dijalankan ketika profile admin pemanggil sudah ada.
+6. Branch error menggunakan `error.code`, bukan mencocokkan `error.message`.
+7. `email_exists` dan `user_already_exists` menghasilkan pesan email sudah digunakan. Error Auth atau
+   trigger lainnya menghasilkan pesan generik tanpa membocorkan detail internal.
+8. Return message sukses agar Superforms menutup modal dan memuat ulang daftar.
 
 Tidak perlu insert profile kedua dari aplikasi karena akan menduplikasi tanggung jawab trigger.
 
@@ -186,9 +210,23 @@ Tidak perlu insert profile kedua dari aplikasi karena akan menduplikasi tanggung
 Endpoint `PATCH /admin/users/[id]`:
 
 1. Validasi route ID dengan `z.uuid()` dan body `isActive` sebagai boolean.
-2. Tolak request jika target sama dengan user yang sedang login.
-3. Panggil `auth.admin.updateUserById()` untuk ban atau unban.
-4. Return status terbaru atau pesan error generik.
+2. Ambil user dari `safeGetSession()` dan tolak dengan `403` hanya jika target sama dengan user yang
+   sedang login dan request akan menonaktifkan akun tersebut.
+3. Nonaktifkan dengan `ban_duration: '876000h'` dan aktifkan dengan `ban_duration: 'none'`.
+4. Branch error menggunakan `error.code`; `user_not_found` menghasilkan `404` dan error lainnya
+   menghasilkan pesan generik.
+5. Hitung status response dari `data.user.banned_until`, bukan dari nilai request.
+6. UI menonaktifkan action selama request, lalu menampilkan toast dan menjalankan `invalidateAll()`.
+
+### 6.4 Supabase Admin Client
+
+Buat satu singleton di `src/lib/server/supabase-admin.ts`:
+
+- Gunakan `PUBLIC_SUPABASE_URL` dan `SUPABASE_SECRET_KEY`.
+- Set `persistSession: false` dan `autoRefreshToken: false`.
+- Jangan memasang storage atau cookie karena client ini tidak mewakili session pengguna.
+- Jangan re-export client melalui module yang dapat diimpor browser.
+- Pastikan `SUPABASE_SECRET_KEY` tersedia pada environment local dan deployment sebelum build.
 
 ## 7. Perubahan File
 
@@ -196,7 +234,7 @@ Endpoint `PATCH /admin/users/[id]`:
 - `src/routes/admin/users/+page.server.ts`: load daftar dan action create.
 - `src/routes/admin/users/+page.svelte`: summary, table, dan state modal.
 - `src/routes/admin/users/columns.ts`: definisi kolom dan filter.
-- `src/routes/admin/users/mock-data.ts`: fixture sementara untuk fase UI.
+- `src/routes/admin/users/mock-data.ts`: fixture fase UI yang dihapus setelah integrasi.
 - `src/routes/admin/users/types.ts`: kontrak row yang dipakai UI mock dan backend final.
 - `src/routes/admin/users/user-form-dialog.svelte`: form tambah pengguna.
 - `src/routes/admin/users/user-identity-cell.svelte`: avatar, nama, email, dan label akun sendiri.
@@ -224,14 +262,30 @@ Fase UI mock:
 
 Fase integrasi Supabase:
 
-1. [ ] Buat Supabase admin client server-only.
-2. [ ] Ganti mock load dengan daftar Auth users dan penggabungan profile.
-3. [ ] Ganti action mock dengan `auth.admin.createUser()`.
-4. [ ] Implement endpoint serta dropdown aktif/nonaktif.
-5. [ ] Tambahkan proteksi akun sendiri.
-6. [ ] Hapus `mock-data.ts`.
-7. [ ] Tambahkan test server untuk create dan perubahan status.
-8. [ ] Jalankan Svelte autofixer, `bun run check`, ESLint changed files, dan `bun run test`.
+1. [x] Buat Supabase admin client server-only.
+2. [x] Ganti mock load dengan `listUsers({ page: 1, perPage: 1000 })` dan penggabungan profile.
+3. [x] Tambahkan guard hasil terpotong, fallback profile/email/role, status berbasis waktu ban,
+       sorting, dan error load generik.
+4. [x] Ganti action mock dengan `auth.admin.createUser()` dan error-code handling.
+5. [x] Hapus password dari response action.
+6. [x] Implement endpoint ban/unban serta dropdown aktif/nonaktif.
+7. [x] Tambahkan proteksi deaktivasi akun sendiri dengan response `403`.
+8. [x] Hapus `mock-data.ts` dan badge mock.
+9. [x] Tambahkan test server untuk load, create, dan perubahan status.
+10. [ ] Pastikan `SUPABASE_SECRET_KEY` tersedia pada environment deployment.
+11. [x] Jalankan smoke test read-only daftar user terhadap project Supabase.
+12. [x] Jalankan Svelte autofixer, `bun run check`, ESLint changed files, `bun run test`, dan build.
+
+Test minimum:
+
+- Load memanggil pagination eksplisit, menolak hasil terpotong, menggabungkan profile, mengurutkan
+  row, dan menghitung summary.
+- Load menangani daftar kosong, profile/email yang hilang, ban aktif, ban kedaluwarsa, error Supabase,
+  dan error database.
+- Create menangani form invalid, sukses, email duplikat berdasarkan `error.code`, dan error tidak
+  terduga, serta memastikan password tidak ada pada response.
+- Endpoint status menangani UUID/body invalid, deaktivasi akun sendiri, ban, unban, user tidak
+  ditemukan, dan error Supabase.
 
 ## 9. Kriteria Selesai
 
@@ -242,6 +296,7 @@ Fase integrasi Supabase:
 - Email duplikat dan input tidak valid menghasilkan pesan yang dapat dipahami.
 - Admin dapat menonaktifkan dan mengaktifkan kembali login pengguna.
 - Admin tidak dapat menonaktifkan akunnya sendiri.
+- Status response selalu mengikuti `banned_until` yang dikembalikan Supabase.
 - Secret key tidak pernah dikirim ke browser.
 - Halaman dapat digunakan pada desktop dan mobile.
 - Type check, lint, dan test lulus.
