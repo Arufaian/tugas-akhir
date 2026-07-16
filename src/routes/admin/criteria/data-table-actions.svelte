@@ -16,12 +16,14 @@
 		name,
 		inputType,
 		isActive,
+		isPrice,
 		showScaleWarning = false
 	}: {
 		id: string;
 		name: string;
 		inputType: string;
 		isActive: boolean;
+		isPrice: boolean;
 		showScaleWarning?: boolean;
 	} = $props();
 
@@ -96,7 +98,7 @@
 				<PencilIcon />
 				Edit
 			</DropdownMenu.Item>
-			{#if inputType === 'scale'}
+			{#if inputType === 'scale' && !isPrice}
 				<DropdownMenu.Item onclick={() => goto(resolve(`/admin/criteria/${id}/scales`))}>
 					<RulerIcon />
 					Skala
@@ -110,21 +112,30 @@
 					{/if}
 				</DropdownMenu.Item>
 			{/if}
-			<DropdownMenu.Item disabled={isUpdatingStatus} onclick={handleStatusChange}>
-				<PowerIcon />
-				{isActive ? 'Nonaktifkan' : 'Aktifkan'}
-			</DropdownMenu.Item>
-			<DropdownMenu.Separator />
-			<DropdownMenu.Item
-				variant="destructive"
-				disabled={isUpdatingStatus}
-				onclick={() => (showDialog = true)}
-			>
-				<Trash2Icon />
-				Delete
-			</DropdownMenu.Item>
+			{#if !isPrice}
+				<DropdownMenu.Item disabled={isUpdatingStatus} onclick={handleStatusChange}>
+					<PowerIcon />
+					{isActive ? 'Nonaktifkan' : 'Aktifkan'}
+				</DropdownMenu.Item>
+				<DropdownMenu.Separator />
+				<DropdownMenu.Item
+					variant="destructive"
+					disabled={isUpdatingStatus}
+					onclick={() => (showDialog = true)}
+				>
+					<Trash2Icon />
+					Delete
+				</DropdownMenu.Item>
+			{/if}
 		</DropdownMenu.Content>
 	</DropdownMenu.Root>
 </div>
 
-<ConfirmDeleteDialog bind:open={showDialog} {name} loading={isDeleting} onConfirm={handleDelete} />
+{#if !isPrice}
+	<ConfirmDeleteDialog
+		bind:open={showDialog}
+		{name}
+		loading={isDeleting}
+		onConfirm={handleDelete}
+	/>
+{/if}

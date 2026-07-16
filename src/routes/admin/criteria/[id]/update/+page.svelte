@@ -3,7 +3,9 @@
 	import * as Form from '$lib/components/ui/form/index.js';
 	import * as RadioGroup from '$lib/components/ui/radio-group/index.js';
 	import * as Field from '$lib/components/ui/field/index.js';
+	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
+	import { Switch } from '$lib/components/ui/switch/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -19,7 +21,16 @@
 	import { resolve } from '$app/paths';
 	import Spinner from '$lib/components/ui/spinner/spinner.svelte';
 
-	let { data }: { data: { form: SuperValidated<Infer<UpdateCriterionSchema>> } } = $props();
+	let {
+		data
+	}: {
+		data: {
+			form: SuperValidated<Infer<UpdateCriterionSchema>>;
+			criterionId: string;
+			isActive: boolean;
+			priceCriterion: { id: string; code: string; name: string } | null;
+		};
+	} = $props();
 
 	const initialForm = () => data.form;
 	const form = superForm(initialForm(), {
@@ -35,6 +46,19 @@
 	});
 
 	const { form: formData, enhance, submitting } = form;
+	let hasOtherPrice = $derived(
+		data.priceCriterion !== null && data.priceCriterion.id !== data.criterionId
+	);
+	let priceToggleDisabled = $derived(!$formData.isPrice && (!data.isActive || hasOtherPrice));
+
+	function setPriceMarker(checked: boolean) {
+		$formData.isPrice = checked;
+		if (!checked) return;
+
+		$formData.unit = 'Rp';
+		$formData.type = 'cost';
+		$formData.inputType = 'number';
+	}
 
 	const types = [
 		{ value: 'benefit', label: 'Benefit', desc: 'Semakin besar semakin baik' },
@@ -75,6 +99,37 @@
 
 		<Card.Content>
 			<form method="POST" use:enhance class="flex flex-col gap-6">
+				<Form.Field {form} name="isPrice">
+					<Form.Control>
+						{#snippet children({ props })}
+							<Field.Field orientation="horizontal" data-disabled={priceToggleDisabled}>
+								<Field.Content>
+									<Form.Label for="is-price">Gunakan sebagai filter harga</Form.Label>
+									<Field.Description>
+										{#if hasOtherPrice}
+											Nonaktifkan penanda pada {data.priceCriterion?.code}
+											{data.priceCriterion?.name} terlebih dahulu.
+										{:else if !data.isActive && !$formData.isPrice}
+											Aktifkan kriteria terlebih dahulu.
+										{:else if $formData.isPrice}
+											Nilai kriteria ini digunakan untuk filter data range budget.
+										{:else}
+											Jika tidak ada penanda aktif, kalkulasi sales tidak tersedia.
+										{/if}
+									</Field.Description>
+								</Field.Content>
+								<Switch
+									{...props}
+									id="is-price"
+									checked={$formData.isPrice}
+									disabled={priceToggleDisabled}
+									onCheckedChange={setPriceMarker}
+								/>
+							</Field.Field>
+						{/snippet}
+					</Form.Control>
+				</Form.Field>
+
 				<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 					<Form.Field {form} name="name">
 						<Form.Control>
@@ -90,7 +145,12 @@
 						<Form.Control>
 							{#snippet children({ props })}
 								<Form.Label>Satuan</Form.Label>
-								<Input {...props} bind:value={$formData.unit} placeholder="Cth: CC, kg, tahun" />
+								<Input
+									{...props}
+									bind:value={$formData.unit}
+									placeholder="Cth: CC, kg, tahun"
+									readonly={$formData.isPrice}
+								/>
 							{/snippet}
 						</Form.Control>
 						<Form.FieldErrors />
@@ -100,15 +160,26 @@
 				<Form.Field {form} name="type">
 					<Form.Control>
 						{#snippet children({ props })}
-							<Form.Label>Tipe Kriteria</Form.Label>
-							<RadioGroup.Root bind:value={$formData.type} {...props}>
-								{#each types as t (t.value)}
-									<div class="flex items-center gap-2">
-										<RadioGroup.Item value={t.value} id={`type-${t.value}`} />
-										<Label for={`type-${t.value}`}>{t.label}</Label>
-									</div>
-								{/each}
-							</RadioGroup.Root>
+							{#if $formData.isPrice}
+								<input type="hidden" name="type" value="cost" />
+								<Field.Field orientation="horizontal" data-disabled>
+									<Field.Content>
+										<Form.Label>Tipe Kriteria</Form.Label>
+										<Field.Description>Semakin kecil semakin baik.</Field.Description>
+									</Field.Content>
+									<Badge variant="secondary">Cost</Badge>
+								</Field.Field>
+							{:else}
+								<Form.Label>Tipe Kriteria</Form.Label>
+								<RadioGroup.Root bind:value={$formData.type} {...props}>
+									{#each types as t (t.value)}
+										<div class="flex items-center gap-2">
+											<RadioGroup.Item value={t.value} id={`type-${t.value}`} />
+											<Label for={`type-${t.value}`}>{t.label}</Label>
+										</div>
+									{/each}
+								</RadioGroup.Root>
+							{/if}
 						{/snippet}
 					</Form.Control>
 					<Form.FieldErrors />
@@ -117,15 +188,26 @@
 				<Form.Field {form} name="inputType">
 					<Form.Control>
 						{#snippet children({ props })}
-							<Form.Label>Tipe Input</Form.Label>
-							<RadioGroup.Root bind:value={$formData.inputType} {...props}>
-								{#each inputTypes as t (t.value)}
-									<div class="flex items-center gap-2">
-										<RadioGroup.Item value={t.value} id={`input-type-${t.value}`} />
-										<Label for={`input-type-${t.value}`}>{t.label}</Label>
-									</div>
-								{/each}
-							</RadioGroup.Root>
+							{#if $formData.isPrice}
+								<input type="hidden" name="inputType" value="number" />
+								<Field.Field orientation="horizontal" data-disabled>
+									<Field.Content>
+										<Form.Label>Tipe Input</Form.Label>
+										<Field.Description>Nilai numerik dalam rupiah.</Field.Description>
+									</Field.Content>
+									<Badge variant="secondary">Angka</Badge>
+								</Field.Field>
+							{:else}
+								<Form.Label>Tipe Input</Form.Label>
+								<RadioGroup.Root bind:value={$formData.inputType} {...props}>
+									{#each inputTypes as t (t.value)}
+										<div class="flex items-center gap-2">
+											<RadioGroup.Item value={t.value} id={`input-type-${t.value}`} />
+											<Label for={`input-type-${t.value}`}>{t.label}</Label>
+										</div>
+									{/each}
+								</RadioGroup.Root>
+							{/if}
 						{/snippet}
 					</Form.Control>
 					<Form.FieldErrors />

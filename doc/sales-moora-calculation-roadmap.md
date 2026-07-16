@@ -347,7 +347,8 @@ API mock, database sementara, atau abstraction khusus mock.
 ### Fase 4 - Implementasi Fungsional
 
 - [ ] Gunakan `+page.server.ts` untuk memuat katalog aktif, kategori, gambar, dan rentang harga.
-- [ ] Gunakan kriteria `C6` sebagai sumber harga selama kode tersebut tetap menjadi konvensi data.
+- [x] Sediakan penanda `isPrice` yang dapat dikelola admin tanpa bergantung pada kode atau urutan.
+- [ ] Gunakan kriteria aktif dengan `isPrice = true` sebagai sumber harga.
 - [ ] Ganti data mock pada halaman dengan data dari server `load`.
 - [ ] Buat satu action `calculate` untuk memvalidasi filter dan menjalankan simulasi.
 - [ ] Filter seluruh kandidat berdasarkan kategori dan harga di server.
@@ -366,9 +367,9 @@ Prinsip implementasi backend tahap awal:
 - Validasi ulang kategori dan rentang harga di server. Jangan mempercayai daftar ID kandidat dari
   browser.
 - Simulasi sales bersifat read-only dan tidak menggunakan `createMooraCalculation()`.
-- Tidak perlu tabel, migration, dependency, cache, queue, atau riwayat baru.
-- Jika `C6` harus dapat dihapus atau diganti fungsinya oleh admin, tambahkan penanda kriteria harga di
-  database pada fase terpisah. Jangan menduplikasi harga ke tabel alternative.
+- Tidak perlu tabel, dependency, cache, queue, atau riwayat baru.
+- Jika tidak ada kriteria dengan `isPrice = true`, hentikan alur dan tampilkan Alert bahwa sumber harga
+  belum ditetapkan. Jangan menduplikasi harga ke tabel alternative.
 
 ### Fase 5 - Validasi Alur
 
@@ -409,7 +410,7 @@ Evaluasi dilakukan berdasarkan penggunaan nyata, bukan untuk menambah fitur sebe
 
 Sesi berikutnya berfokus pada persetujuan UI mock dan implementasi backend minimum:
 
-1. Pastikan `C6` dapat diperlakukan sebagai kriteria harga tetap.
+1. Tangani kondisi saat admin belum menetapkan kriteria dengan `isPrice = true`.
 2. Isi `+page.server.ts` dengan katalog aktif dan satu action simulasi.
 3. Hubungkan state halaman ke data server dan hasil action.
 4. Ganti test mock dengan test filter, validasi, dan kalkulasi server.

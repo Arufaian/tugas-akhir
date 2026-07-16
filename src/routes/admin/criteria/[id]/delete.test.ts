@@ -25,7 +25,7 @@ const {
 }));
 
 vi.mock('$lib/server/db/index.js', () => ({
-	db: { transaction: mockTransaction, update: mockUpdate }
+	db: { transaction: mockTransaction, select: mockSelect, update: mockUpdate }
 }));
 
 const criterionId = '11111111-1111-4111-8111-111111111111';
@@ -83,6 +83,7 @@ describe('criterion status', () => {
 	});
 
 	it.each([false, true])('sets isActive to %s', async (isActive) => {
+		mockSelect.mockReturnValueOnce(valueQuery([{ id: criterionId, isPrice: false }]));
 		mockReturning.mockResolvedValue([{ id: criterionId }]);
 
 		const response = await PATCH(patchRequest(isActive));
@@ -93,20 +94,51 @@ describe('criterion status', () => {
 	});
 
 	it('returns 404 when the criterion does not exist', async () => {
-		mockReturning.mockResolvedValue([]);
+		mockSelect.mockReturnValueOnce(valueQuery([]));
 
 		const response = await PATCH(patchRequest(false));
 
 		expect(response.status).toBe(404);
+		expect(mockUpdate).not.toHaveBeenCalled();
+	});
+
+	it('returns 409 when deactivating the price criterion', async () => {
+		mockSelect.mockReturnValueOnce(valueQuery([{ id: criterionId, isPrice: true }]));
+
+		const response = await PATCH(patchRequest(false));
+
+		expect(response.status).toBe(409);
+		expect(await response.json()).toEqual({
+			message: 'Lepaskan penanda filter harga terlebih dahulu'
+		});
+		expect(mockUpdate).not.toHaveBeenCalled();
 	});
 
 	it('returns a generic 500 response when the database fails', async () => {
+		mockSelect.mockReturnValueOnce(valueQuery([{ id: criterionId, isPrice: false }]));
 		mockReturning.mockRejectedValue(new Error('sensitive database error'));
 
 		const response = await PATCH(patchRequest(false));
 
 		expect(response.status).toBe(500);
 		expect(await response.json()).toEqual({ message: 'Gagal mengubah status kriteria' });
+	});
+
+	it('maps a concurrent price invariant conflict to 409', async () => {
+		mockSelect.mockReturnValueOnce(valueQuery([{ id: criterionId, isPrice: false }]));
+		mockReturning.mockRejectedValue(
+			Object.assign(new Error('check violation'), {
+				code: '23514',
+				constraint_name: 'criteria_price_invariants'
+			})
+		);
+
+		const response = await PATCH(patchRequest(false));
+
+		expect(response.status).toBe(409);
+		expect(await response.json()).toEqual({
+			message: 'Lepaskan penanda filter harga terlebih dahulu'
+		});
 	});
 });
 
@@ -134,7 +166,7 @@ describe('delete criterion guard', () => {
 	});
 
 	it('returns 409 when the criterion has alternative values', async () => {
-		useTransaction([{ id: criterionId }], [{ id: 'value-id' }]);
+		useTransaction([{ id: criterionId, isPrice: false }], [{ id: 'value-id' }]);
 
 		const response = await DELETE(request());
 
@@ -146,7 +178,7 @@ describe('delete criterion guard', () => {
 	});
 
 	it('returns 409 when the criterion has calculation history', async () => {
-		useTransaction([{ id: criterionId }], [], [{ id: 'calculation-id' }]);
+		useTransaction([{ id: criterionId, isPrice: false }], [], [{ id: 'calculation-id' }]);
 
 		const response = await DELETE(request());
 
@@ -158,13 +190,25 @@ describe('delete criterion guard', () => {
 	});
 
 	it('deletes an unused criterion inside the transaction', async () => {
-		useTransaction([{ id: criterionId }]);
+		useTransaction([{ id: criterionId, isPrice: false }]);
 
 		const response = await DELETE(request());
 
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({ success: true });
 		expect(mockDeleteWhere).toHaveBeenCalledOnce();
+	});
+
+	it('returns 409 when deleting the price criterion', async () => {
+		useTransaction([{ id: criterionId, isPrice: true }]);
+
+		const response = await DELETE(request());
+
+		expect(response.status).toBe(409);
+		expect(await response.json()).toEqual({
+			message: 'Lepaskan penanda filter harga sebelum menghapus kriteria'
+		});
+		expect(mockDelete).not.toHaveBeenCalled();
 	});
 
 	it('returns a generic 500 response when the database fails', async () => {

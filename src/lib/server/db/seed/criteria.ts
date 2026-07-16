@@ -12,7 +12,8 @@ const criteriaSeed = [
 		inputType: 'number' as const,
 		orderIndex: 1,
 		description: null as null,
-		isActive: true
+		isActive: true,
+		isPrice: false
 	},
 	{
 		code: 'C2',
@@ -23,7 +24,8 @@ const criteriaSeed = [
 		inputType: 'tech_features' as const,
 		orderIndex: 2,
 		description: null as null,
-		isActive: true
+		isActive: true,
+		isPrice: false
 	},
 	{
 		code: 'C3',
@@ -34,7 +36,8 @@ const criteriaSeed = [
 		inputType: 'number' as const,
 		orderIndex: 3,
 		description: null as null,
-		isActive: true
+		isActive: true,
+		isPrice: false
 	},
 	{
 		code: 'C4',
@@ -45,7 +48,8 @@ const criteriaSeed = [
 		inputType: 'number' as const,
 		orderIndex: 4,
 		description: null as null,
-		isActive: true
+		isActive: true,
+		isPrice: false
 	},
 	{
 		code: 'C5',
@@ -56,18 +60,20 @@ const criteriaSeed = [
 		inputType: 'scale' as const,
 		orderIndex: 5,
 		description: null as null,
-		isActive: true
+		isActive: true,
+		isPrice: false
 	},
 	{
 		code: 'C6',
 		name: 'Harga',
-		unit: 'juta rupiah',
+		unit: 'Rp',
 		rawWeight: 5,
 		type: 'cost' as const,
 		inputType: 'number' as const,
 		orderIndex: 6,
 		description: null as null,
-		isActive: true
+		isActive: true,
+		isPrice: true
 	},
 	{
 		code: 'C7',
@@ -78,7 +84,8 @@ const criteriaSeed = [
 		inputType: 'scale' as const,
 		orderIndex: 7,
 		description: null as null,
-		isActive: true
+		isActive: true,
+		isPrice: false
 	}
 ];
 
@@ -104,7 +111,8 @@ export async function seedCriteria(): Promise<CriteriaMap> {
 		normalizedWeight: String(c.normalizedWeight),
 		type: c.type,
 		inputType: c.inputType,
-		orderIndex: c.orderIndex
+		orderIndex: c.orderIndex,
+		isPrice: c.isPrice
 	}));
 
 	await db.insert(criteriaTable).values(criteriaValues);

@@ -18,6 +18,19 @@ export async function PATCH({ params, request }) {
 	if (!statusResult.success) return json({ message: 'Status tidak valid' }, { status: 400 });
 
 	try {
+		const [existingCriterion] = await db
+			.select({ id: criteriaTable.id, isPrice: criteriaTable.isPrice })
+			.from(criteriaTable)
+			.where(eq(criteriaTable.id, idResult.data))
+			.limit(1);
+
+		if (!existingCriterion) {
+			return json({ message: 'Kriteria tidak ditemukan' }, { status: 404 });
+		}
+		if (existingCriterion.isPrice && !statusResult.data.isActive) {
+			return json({ message: 'Lepaskan penanda filter harga terlebih dahulu' }, { status: 409 });
+		}
+
 		const [criterion] = await db
 			.update(criteriaTable)
 			.set({ isActive: statusResult.data.isActive, updatedAt: new Date() })
@@ -27,7 +40,19 @@ export async function PATCH({ params, request }) {
 		if (!criterion) return json({ message: 'Kriteria tidak ditemukan' }, { status: 404 });
 
 		return json({ success: true, isActive: statusResult.data.isActive });
-	} catch {
+	} catch (error) {
+		const dbError = error as {
+			code?: string;
+			constraint_name?: string;
+			cause?: { code?: string; constraint_name?: string };
+		};
+		if (
+			(dbError.code ?? dbError.cause?.code) === '23514' &&
+			(dbError.constraint_name ?? dbError.cause?.constraint_name) === 'criteria_price_invariants'
+		) {
+			return json({ message: 'Lepaskan penanda filter harga terlebih dahulu' }, { status: 409 });
+		}
+
 		return json({ message: 'Gagal mengubah status kriteria' }, { status: 500 });
 	}
 }
@@ -40,13 +65,14 @@ export async function DELETE({ params }) {
 
 		const result = await db.transaction(async (tx) => {
 			const [criterion] = await tx
-				.select({ id: criteriaTable.id })
+				.select({ id: criteriaTable.id, isPrice: criteriaTable.isPrice })
 				.from(criteriaTable)
 				.where(eq(criteriaTable.id, id))
 				.for('update')
 				.limit(1);
 
 			if (!criterion) return 'not_found';
+			if (criterion.isPrice) return 'price';
 
 			const [existingValue] = await tx
 				.select({ id: alternativeCriterionValuesTable.id })
@@ -72,6 +98,12 @@ export async function DELETE({ params }) {
 		}
 		if (result === 'used_value') {
 			return json({ message: 'Kriteria sudah digunakan pada nilai alternatif' }, { status: 409 });
+		}
+		if (result === 'price') {
+			return json(
+				{ message: 'Lepaskan penanda filter harga sebelum menghapus kriteria' },
+				{ status: 409 }
+			);
 		}
 		if (result === 'used_calculation') {
 			return json(

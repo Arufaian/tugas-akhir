@@ -29,6 +29,18 @@ export const columns: ColumnDef<CriterionRow>[] = [
 			})
 	},
 	{
+		accessorKey: 'isPrice',
+		header: 'Peran',
+		cell: ({ row }) => {
+			if (!row.original.isPrice) return;
+
+			const children = createRawSnippet(() => ({
+				render: () => '<span>Filter Harga</span>'
+			}));
+			return renderComponent(Badge, { variant: 'info', children });
+		}
+	},
+	{
 		accessorKey: 'type',
 		header: ({ column }) =>
 			renderComponent(DataTableColumnHeader, {
@@ -152,6 +164,7 @@ export const columns: ColumnDef<CriterionRow>[] = [
 				name: row.original.name,
 				inputType: row.original.inputType,
 				isActive: row.original.isActive,
+				isPrice: row.original.isPrice,
 				showScaleWarning: row.original.inputType === 'scale' && row.original.scaleCount === 0
 			});
 		},

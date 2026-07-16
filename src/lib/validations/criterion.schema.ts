@@ -12,6 +12,7 @@ export const criterionSchema = z.object({
 	inputType: z.enum(['number', 'scale', 'tech_features']),
 	orderIndex: z.number(),
 	isActive: z.boolean(),
+	isPrice: z.boolean(),
 	createdAt: z.date(),
 	updatedAt: z.date()
 });
@@ -28,7 +29,9 @@ export const createCriterionSchema = z.object({
 	inputType: z.enum(['number', 'scale', 'tech_features']).default('number')
 });
 
-export const updateCriterionSchema = createCriterionSchema;
+export const updateCriterionSchema = createCriterionSchema.extend({
+	isPrice: z.boolean().default(false)
+});
 
 export type Criterion = z.infer<typeof criterionSchema>;
 
