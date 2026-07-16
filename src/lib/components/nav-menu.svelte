@@ -9,20 +9,22 @@
 		<NavigationMenu.Item>
 			<NavigationMenu.Link
 				href="/"
-				class="flex items-center gap-2 rounded-md px-2 py-2 text-sm font-semibold tracking-tight"
+				class="flex items-center  rounded-md py-2  text-sm font-semibold tracking-tight"
 			>
-				<img src={logo} alt="Yamaha Mekar" class="h-8 w-8 rounded-sm object-contain" />
+				<img src={logo} alt="" class="size-8 rounded-sm object-contain" />
 			</NavigationMenu.Link>
 		</NavigationMenu.Item>
 
 		<NavigationMenu.Item>
-			<NavigationMenu.Link href="/" class="px-2 py-2 font-semibold">Link</NavigationMenu.Link>
+			<NavigationMenu.Link href="/" class="px-2 py-2 font-semibold">Beranda</NavigationMenu.Link>
 		</NavigationMenu.Item>
 		<NavigationMenu.Item>
-			<NavigationMenu.Link href="/" class="px-2 py-2 font-semibold">Link</NavigationMenu.Link>
+			<NavigationMenu.Link href="/#cara-kerja" class="px-2 py-2 font-semibold">
+				Cara Kerja
+			</NavigationMenu.Link>
 		</NavigationMenu.Item>
 		<NavigationMenu.Item>
-			<NavigationMenu.Link href="/" class="px-2 py-2 font-semibold">Link</NavigationMenu.Link>
+			<NavigationMenu.Link href="/#faq" class="px-2 py-2 font-semibold">FAQ</NavigationMenu.Link>
 		</NavigationMenu.Item>
 	</NavigationMenu.List>
 </NavigationMenu.Root>

@@ -4,6 +4,7 @@
 	import LayoutDashboardIcon from '@lucide/svelte/icons/layout-dashboard';
 	import LogOutIcon from '@lucide/svelte/icons/log-out';
 	import { toast } from 'svelte-sonner';
+	import logo from '$lib/assets/favicon1.png';
 	import AppSidebar from '$lib/components/app-sidebar.svelte';
 	import NavMenu from '$lib/components/nav-menu.svelte';
 	import * as Avatar from '$lib/components/ui/avatar/index.js';
@@ -45,14 +46,26 @@
 ></form>
 
 <Sidebar.Provider>
-	<div class="block md:hidden">
-		<AppSidebar user={data.profile} collapsible="offcanvas" />
-	</div>
+	{#if data.profile?.role === 'admin'}
+		<div class="block md:hidden">
+			<AppSidebar user={data.profile} collapsible="offcanvas" />
+		</div>
+	{/if}
 	<Sidebar.Inset>
 		<header class="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4 lg:px-8">
 			<div class="flex items-center md:hidden">
-				<Sidebar.Trigger class="-ms-1" />
-				<Separator orientation="vertical" class="me-2 data-[orientation=vertical]:h-4" />
+				{#if data.profile?.role === 'admin'}
+					<Sidebar.Trigger class="-ms-1" />
+					<Separator orientation="vertical" class="me-2 data-[orientation=vertical]:h-4" />
+				{:else}
+					<a
+						href={resolve('/')}
+						aria-label="Yamaha Mekar"
+						class="rounded-md focus-visible:outline-2"
+					>
+						<img src={logo} alt="" class="size-8 object-contain" />
+					</a>
+				{/if}
 			</div>
 			<div class="hidden md:flex">
 				<NavMenu />
