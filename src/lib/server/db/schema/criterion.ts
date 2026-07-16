@@ -7,7 +7,8 @@ import {
 	integer,
 	boolean,
 	timestamp,
-	uniqueIndex
+	uniqueIndex,
+	check
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
@@ -27,6 +28,7 @@ export const criteriaTable = pgTable(
 		type: criterionTypeEnum().notNull(),
 		inputType: inputTypeEnum('input_type').default('number').notNull(),
 		orderIndex: integer('order_index').notNull(),
+		isPrice: boolean('is_price').default(false).notNull(),
 		isActive: boolean('is_active').default(true).notNull(),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
@@ -34,6 +36,13 @@ export const criteriaTable = pgTable(
 	(table) => [
 		uniqueIndex('uq_criteria_single_tech_features')
 			.on(table.inputType)
-			.where(sql`${table.inputType} = 'tech_features'`)
+			.where(sql`${table.inputType} = 'tech_features'`),
+		uniqueIndex('uq_criteria_single_price')
+			.on(table.isPrice)
+			.where(sql`${table.isPrice} = true`),
+		check(
+			'criteria_price_invariants',
+			sql`NOT ${table.isPrice} OR (${table.isActive} AND ${table.type} = 'cost' AND ${table.inputType} = 'number' AND ${table.unit} = 'Rp')`
+		)
 	]
 );

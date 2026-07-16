@@ -169,6 +169,13 @@
       "when": 1783936209284,
       "tag": "0023_normal_deathbird",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1784192173505,
+      "tag": "0024_breezy_plazm",
+      "breakpoints": true
     }
   ]
 }
