@@ -2,6 +2,7 @@
 	import logo from '$lib/assets/favicon1.png';
 
 	import * as NavigationMenu from '$lib/components/ui/navigation-menu/index.js';
+	import { resolve } from '$app/paths';
 </script>
 
 <NavigationMenu.Root>
@@ -25,6 +26,12 @@
 		</NavigationMenu.Item>
 		<NavigationMenu.Item>
 			<NavigationMenu.Link href="/#faq" class="px-2 py-2 font-semibold">FAQ</NavigationMenu.Link>
+		</NavigationMenu.Item>
+		<NavigationMenu.Item>
+			<NavigationMenu.Link
+				href={resolve('/(public)/sales/calculate')}
+				class="px-2 py-2 font-semibold">Perhitungan</NavigationMenu.Link
+			>
 		</NavigationMenu.Item>
 	</NavigationMenu.List>
 </NavigationMenu.Root>
