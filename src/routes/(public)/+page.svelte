@@ -55,7 +55,7 @@
 		</div>
 
 		<figure class="overflow-hidden rounded-2xl border bg-card shadow-sm lg:col-span-5">
-			<div class="aspect-[4/3] p-8 sm:p-10">
+			<div class="aspect-4/3 p-8 sm:p-10">
 				<img
 					src={data.latestAlternative?.img.url ?? yamahaLogo}
 					alt={data.latestAlternative ? `Yamaha ${data.latestAlternative.name}` : 'Logo Yamaha'}
