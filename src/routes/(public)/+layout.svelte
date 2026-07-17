@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import LayoutDashboardIcon from '@lucide/svelte/icons/layout-dashboard';
 	import LogOutIcon from '@lucide/svelte/icons/log-out';
+	import MenuIcon from '@lucide/svelte/icons/menu';
 	import { toast } from 'svelte-sonner';
 	import logo from '$lib/assets/favicon1.png';
 	import AppSidebar from '$lib/components/app-sidebar.svelte';
@@ -12,6 +13,7 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import LightSwitch from '$lib/components/ui/light-switch/light-switch.svelte';
 	import { Separator } from '$lib/components/ui/separator/index.js';
+	import * as Sheet from '$lib/components/ui/sheet/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import { getInitials } from '$lib/utils/string';
 
@@ -67,6 +69,72 @@
 					>
 						<img src={logo} alt="" class="size-8 object-contain" />
 					</a>
+
+					<Sheet.Root>
+						<Sheet.Trigger>
+							{#snippet child({ props })}
+								<Button
+									{...props}
+									class="ml-2"
+									variant="ghost"
+									size="icon"
+									aria-label="Buka navigasi"
+								>
+									<MenuIcon />
+								</Button>
+							{/snippet}
+						</Sheet.Trigger>
+						<Sheet.Content side="left" class="w-72 p-0">
+							<Sheet.Header class="border-b">
+								<div class="flex items-center gap-2">
+									<img src={logo} alt="" class="size-8 object-contain" />
+									<Sheet.Title>Yamaha Mekar</Sheet.Title>
+								</div>
+							</Sheet.Header>
+							<nav class="flex flex-col gap-1 px-4" aria-label="Navigasi mobile">
+								<Sheet.Close>
+									{#snippet child({ props })}
+										<Button {...props} href="/" variant="ghost" class="w-full justify-start">
+											Beranda
+										</Button>
+									{/snippet}
+								</Sheet.Close>
+								<Sheet.Close>
+									{#snippet child({ props })}
+										<Button
+											{...props}
+											href="/#cara-kerja"
+											variant="ghost"
+											class="w-full justify-start"
+										>
+											Cara Kerja
+										</Button>
+									{/snippet}
+								</Sheet.Close>
+								<Sheet.Close>
+									{#snippet child({ props })}
+										<Button {...props} href="/#faq" variant="ghost" class="w-full justify-start">
+											FAQ
+										</Button>
+									{/snippet}
+								</Sheet.Close>
+								{#if data.profile?.role === 'sales'}
+									<Sheet.Close>
+										{#snippet child({ props })}
+											<Button
+												{...props}
+												href={resolve('/(public)/sales/calculate')}
+												variant="ghost"
+												class="w-full justify-start"
+											>
+												Perhitungan
+											</Button>
+										{/snippet}
+									</Sheet.Close>
+								{/if}
+							</nav>
+						</Sheet.Content>
+					</Sheet.Root>
 				{/if}
 			</div>
 			<div class="hidden md:flex">

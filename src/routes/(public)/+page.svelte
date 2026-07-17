@@ -23,8 +23,8 @@
 </svelte:head>
 
 <main class="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 sm:px-6 lg:px-8">
-	<section class="grid items-center gap-10 py-12 lg:grid-cols-12 lg:gap-16 lg:py-20">
-		<div class="flex flex-col items-start gap-6 lg:col-span-7">
+	<section class="grid items-center gap-10 py-12 md:grid-cols-12 lg:gap-16 lg:py-20">
+		<div class="flex flex-col items-start gap-6 md:col-span-7">
 			<Badge variant="outline">Metode MOORA</Badge>
 			<div class="flex max-w-3xl flex-col gap-4">
 				<p class="text-sm font-semibold tracking-[0.16em] text-primary uppercase">
@@ -54,7 +54,7 @@
 			{/if}
 		</div>
 
-		<figure class="overflow-hidden rounded-2xl border bg-card shadow-sm lg:col-span-5">
+		<figure class="overflow-hidden rounded-2xl border bg-card shadow-sm md:col-span-5">
 			<div class="aspect-4/3 p-8 sm:p-10">
 				<img
 					src={data.latestAlternative?.img.url ?? yamahaLogo}
