@@ -2,7 +2,10 @@
 	import logo from '$lib/assets/favicon1.png';
 
 	import * as NavigationMenu from '$lib/components/ui/navigation-menu/index.js';
+	import type { UserProfileData } from '$lib/types/user-profile.js';
 	import { resolve } from '$app/paths';
+
+	let { role }: { role?: UserProfileData['role'] } = $props();
 </script>
 
 <NavigationMenu.Root>
@@ -27,11 +30,13 @@
 		<NavigationMenu.Item>
 			<NavigationMenu.Link href="/#faq" class="px-2 py-2 font-semibold">FAQ</NavigationMenu.Link>
 		</NavigationMenu.Item>
-		<NavigationMenu.Item>
-			<NavigationMenu.Link
-				href={resolve('/(public)/sales/calculate')}
-				class="px-2 py-2 font-semibold">Perhitungan</NavigationMenu.Link
-			>
-		</NavigationMenu.Item>
+		{#if role === 'sales'}
+			<NavigationMenu.Item>
+				<NavigationMenu.Link
+					href={resolve('/(public)/sales/calculate')}
+					class="px-2 py-2 font-semibold">Perhitungan</NavigationMenu.Link
+				>
+			</NavigationMenu.Item>
+		{/if}
 	</NavigationMenu.List>
 </NavigationMenu.Root>

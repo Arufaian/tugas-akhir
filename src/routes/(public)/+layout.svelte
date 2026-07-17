@@ -70,7 +70,7 @@
 				{/if}
 			</div>
 			<div class="hidden md:flex">
-				<NavMenu />
+				<NavMenu role={data.profile?.role} />
 			</div>
 
 			<div class="flex min-w-0 items-center gap-2 sm:gap-4">

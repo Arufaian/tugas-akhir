@@ -5,7 +5,10 @@ import { eq } from 'drizzle-orm';
 
 type Role = 'admin' | 'sales';
 
-const protectedRoutes = [{ path: '/admin', roles: ['admin'] }];
+const protectedRoutes: { path: string; roles: Role[] }[] = [
+	{ path: '/admin', roles: ['admin'] },
+	{ path: '/sales/calculate', roles: ['sales'] }
+];
 
 export const handleRbac: Handle = async ({ event, resolve }) => {
 	const { pathname } = event.url;
