@@ -43,7 +43,7 @@
 
 			{#if !data.profile}
 				<Button href="/auth/login" size="lg">
-					Masuk ke sistem
+					Login
 					<ArrowRightIcon data-icon="inline-end" />
 				</Button>
 			{:else if data.profile.role === 'admin'}
@@ -192,7 +192,7 @@
 				</Button>
 			{:else}
 				<Button href="/auth/login" variant="secondary">
-					Masuk ke sistem
+					Login
 					<ArrowRightIcon data-icon="inline-end" />
 				</Button>
 			{/if}

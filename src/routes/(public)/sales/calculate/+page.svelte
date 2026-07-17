@@ -9,6 +9,8 @@
 		SlidersHorizontal,
 		Trophy
 	} from '@lucide/svelte';
+	import { type FormResult, superForm } from 'sveltekit-superforms';
+	import { zod4Client } from 'sveltekit-superforms/adapters';
 
 	import yamahaLogo from '$lib/assets/favicon1.png';
 	import * as Alert from '$lib/components/ui/alert/index.js';
@@ -17,23 +19,54 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Empty from '$lib/components/ui/empty/index.js';
 	import * as Field from '$lib/components/ui/field/index.js';
+	import * as Form from '$lib/components/ui/form/index.js';
 	import * as Item from '$lib/components/ui/item/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import { Slider } from '$lib/components/ui/slider/index.js';
+	import { Spinner } from '$lib/components/ui/spinner/index.js';
 	import * as Stepper from '$lib/components/ui/stepper/index.js';
-	import { filterAlternatives, mockAlternatives, rankAlternatives } from './mock.js';
+	import { salesCalculationSchema } from '$lib/validations/sales-calculation.schema.js';
 
-	const categoryOptions = [
-		{ value: 'all', label: 'Semua kategori' },
-		{ value: 'Classy', label: 'Classy' },
-		{ value: 'Matic', label: 'Matic' },
-		{ value: 'MAXi', label: 'MAXi' },
-		{ value: 'Moped', label: 'Moped' },
-		{ value: 'Sport', label: 'Sport' },
-		{ value: 'Off-Road', label: 'Off-Road' }
-	];
-	const catalogPriceRange = [18_000_000, 69_000_000];
+	import type { ActionData, PageProps } from './$types.js';
+
+	type Calculation = NonNullable<NonNullable<ActionData>['calculation']>;
+
+	let { data }: PageProps = $props();
+	let step = $state(1);
+	let reviewedFilterKey = $state<string | null>(null);
+	let calculatedFilterKey = $state<string | null>(null);
+	let calculation = $state.raw<Calculation | null>(null);
+	let calculationIssues = $state.raw<string[]>([]);
+
+	const initialForm = () => data.form;
+	const form = superForm(initialForm(), {
+		dataType: 'json',
+		validators: zod4Client(salesCalculationSchema),
+		multipleSubmits: 'prevent',
+		resetForm: false,
+		invalidateAll: false,
+		onUpdate({ form: updatedForm, result }) {
+			const resultData = result.data as FormResult<ActionData>;
+			const issues = resultData && 'issues' in resultData ? resultData.issues : undefined;
+
+			calculationIssues = Array.isArray(issues)
+				? issues.filter((issue): issue is string => typeof issue === 'string')
+				: [];
+			if (!updatedForm.valid || !resultData?.calculation) {
+				if (updatedForm.errors.category || updatedForm.errors.priceRange) step = 1;
+				return;
+			}
+
+			calculation = resultData.calculation;
+			const { category, priceRange } = calculation.filter;
+			reviewedFilterKey = `${category}:${priceRange[0]}:${priceRange[1]}`;
+			calculatedFilterKey = reviewedFilterKey;
+			step = 3;
+		}
+	});
+	const { form: formData, enhance, submitting } = form;
+
 	const currencyFormatter = new Intl.NumberFormat('id-ID', {
 		style: 'currency',
 		currency: 'IDR',
@@ -44,20 +77,29 @@
 		maximumFractionDigits: 6
 	});
 
-	let step = $state(1);
-	let selectedCategory = $state('all');
-	let priceRange = $state<number[]>([...catalogPriceRange]);
-	let reviewedFilterKey = $state<string | null>(null);
-	let calculatedFilterKey = $state<string | null>(null);
-
+	let catalogPriceRange = $derived(data.priceRange ?? [0, 0]);
+	let categoryOptions = $derived([
+		{ value: 'all', label: 'Semua kategori' },
+		...data.categories.map((category) => ({ value: category, label: category }))
+	]);
 	let selectedCategoryLabel = $derived(
-		categoryOptions.find((option) => option.value === selectedCategory)?.label ?? 'Semua kategori'
+		categoryOptions.find((option) => option.value === $formData.category)?.label ?? 'Semua kategori'
 	);
-	let filterKey = $derived(`${selectedCategory}:${priceRange[0]}:${priceRange[1]}`);
+	let filterKey = $derived(
+		`${$formData.category}:${$formData.priceRange[0]}:${$formData.priceRange[1]}`
+	);
 	let filteredAlternatives = $derived(
-		filterAlternatives(mockAlternatives, selectedCategory, priceRange)
+		data.catalog.filter(
+			(alternative) =>
+				($formData.category === 'all' || alternative.category === $formData.category) &&
+				alternative.price >= $formData.priceRange[0] &&
+				alternative.price <= $formData.priceRange[1]
+		)
 	);
-	let rankedAlternatives = $derived(rankAlternatives(filteredAlternatives));
+	let hasIncompleteCandidates = $derived(
+		filteredAlternatives.some((alternative) => !alternative.isComplete)
+	);
+	let rankedAlternatives = $derived(calculation?.results ?? []);
 	let winner = $derived(rankedAlternatives[0]);
 	let canAccessCandidates = $derived(reviewedFilterKey === filterKey);
 	let canAccessResults = $derived(
@@ -67,25 +109,21 @@
 	function invalidateResult() {
 		reviewedFilterKey = null;
 		calculatedFilterKey = null;
+		calculation = null;
+		calculationIssues = [];
 	}
 
 	function resetFilters() {
-		selectedCategory = 'all';
-		priceRange = [...catalogPriceRange];
+		$formData.category = 'all';
+		$formData.priceRange = [catalogPriceRange[0], catalogPriceRange[1]];
 		invalidateResult();
 	}
 
 	function showCandidates() {
+		if (!data.priceRange || data.issues.length) return;
+
 		reviewedFilterKey = filterKey;
 		step = 2;
-	}
-
-	function calculateMockResult() {
-		if (filteredAlternatives.length < 2) return;
-
-		reviewedFilterKey = filterKey;
-		calculatedFilterKey = filterKey;
-		step = 3;
 	}
 
 	function formatCurrency(value: number): string {
@@ -105,7 +143,7 @@
 	<header class="flex max-w-3xl flex-col items-start gap-4">
 		<Badge variant="outline">
 			<Motorbike data-icon="inline-start" />
-			UI Mock
+			Simulasi MOORA
 		</Badge>
 		<div class="flex flex-col gap-2">
 			<p class="text-sm font-semibold tracking-[0.16em] text-primary uppercase">
@@ -123,20 +161,20 @@
 
 	<Stepper.Root bind:step>
 		<Stepper.Nav orientation="horizontal" class="mx-auto w-full max-w-3xl px-2">
-			<Stepper.Item id="needs" class="min-w-0">
-				<Stepper.Trigger class="items-center" aria-label="Tahap 1: Kebutuhan">
+			<Stepper.Item id="needs" class="min-w-0 flex-1">
+				<Stepper.Trigger class="w-full items-center" aria-label="Tahap 1: Kebutuhan">
 					<Stepper.Indicator><SlidersHorizontal /></Stepper.Indicator>
 					<Stepper.Title class="mt-2 text-xs sm:text-sm">Kebutuhan</Stepper.Title>
 					<Stepper.Description class="hidden text-xs md:block">
 						Kategori & anggaran
 					</Stepper.Description>
 				</Stepper.Trigger>
-				<Stepper.Separator />
+				<Stepper.Separator class="left-[calc(50%-0.875rem)]" />
 			</Stepper.Item>
 
-			<Stepper.Item id="candidates" class="min-w-0">
+			<Stepper.Item id="candidates" class="min-w-0 flex-1">
 				<Stepper.Trigger
-					class="items-center"
+					class="w-full items-center"
 					disabled={!canAccessCandidates}
 					aria-label="Tahap 2: Kandidat"
 				>
@@ -146,12 +184,12 @@
 						Motor yang sesuai
 					</Stepper.Description>
 				</Stepper.Trigger>
-				<Stepper.Separator />
+				<Stepper.Separator class="left-[calc(50%-0.875rem)]" />
 			</Stepper.Item>
 
-			<Stepper.Item id="results" class="min-w-0">
+			<Stepper.Item id="results" class="min-w-0 flex-1">
 				<Stepper.Trigger
-					class="items-center"
+					class="w-full items-center"
 					disabled={!canAccessResults}
 					aria-label="Tahap 3: Hasil"
 				>
@@ -161,7 +199,7 @@
 						Rekomendasi MOORA
 					</Stepper.Description>
 				</Stepper.Trigger>
-				<Stepper.Separator />
+				<Stepper.Separator class="left-[calc(50%-0.875rem)]" />
 			</Stepper.Item>
 		</Stepper.Nav>
 
@@ -176,84 +214,123 @@
 					</Card.Header>
 
 					<Card.Content>
+						{#if data.issues.length}
+							<Alert.Root variant="destructive" class="mb-6">
+								<CircleAlert />
+								<Alert.Title>Data belum siap digunakan</Alert.Title>
+								<Alert.Description>
+									<ul class="list-inside list-disc">
+										{#each data.issues as issue (issue)}
+											<li>{issue}</li>
+										{/each}
+									</ul>
+								</Alert.Description>
+							</Alert.Root>
+						{/if}
+
 						<Field.Group>
-							<Field.Field>
-								<Field.Label for="motor-category">Kategori motor</Field.Label>
-								<Select.Root
-									type="single"
-									name="category"
-									bind:value={selectedCategory}
-									onValueChange={invalidateResult}
-								>
-									<Select.Trigger id="motor-category" class="w-full">
-										{selectedCategoryLabel}
-									</Select.Trigger>
-									<Select.Content>
-										<Select.Group>
-											<Select.Label>Kategori</Select.Label>
-											{#each categoryOptions as option (option.value)}
-												<Select.Item value={option.value} label={option.label}>
-													{option.label}
-												</Select.Item>
-											{/each}
-										</Select.Group>
-									</Select.Content>
-								</Select.Root>
-								<Field.Description>
-									Pilih semua kategori jika pelanggan belum menentukan jenis motor.
-								</Field.Description>
-							</Field.Field>
-
-							<Field.Separator />
-
-							<Field.Field>
-								<div class="flex flex-wrap items-start justify-between gap-3">
-									<Field.Content>
-										<Field.Label id="budget-label">Anggaran pelanggan</Field.Label>
+							<Form.Field {form} name="category">
+								{#snippet children({ errors })}
+									<Field.Field data-invalid={errors.length > 0}>
+										<Form.Control>
+											{#snippet children({ props })}
+												<Field.Label for={props.id}>Kategori motor</Field.Label>
+												<Select.Root
+													type="single"
+													bind:value={$formData.category}
+													onValueChange={invalidateResult}
+												>
+													<Select.Trigger
+														id={props.id}
+														aria-invalid={errors.length > 0}
+														class="w-full"
+													>
+														{selectedCategoryLabel}
+													</Select.Trigger>
+													<Select.Content>
+														<Select.Group>
+															<Select.Label>Kategori</Select.Label>
+															{#each categoryOptions as option (option.value)}
+																<Select.Item value={option.value} label={option.label}>
+																	{option.label}
+																</Select.Item>
+															{/each}
+														</Select.Group>
+													</Select.Content>
+												</Select.Root>
+											{/snippet}
+										</Form.Control>
 										<Field.Description>
-											Geser kedua titik untuk menentukan harga minimum dan maksimum.
+											Pilih semua kategori jika pelanggan belum menentukan jenis motor.
 										</Field.Description>
-									</Field.Content>
-									<Badge variant={filteredAlternatives.length >= 2 ? 'success' : 'warning'}>
-										{filteredAlternatives.length} motor sesuai
-									</Badge>
-								</div>
+										<Form.FieldErrors />
+									</Field.Field>
+								{/snippet}
+							</Form.Field>
 
-								<div class="grid grid-cols-2 gap-4 rounded-xl bg-muted/50 p-4">
-									<div class="flex min-w-0 flex-col gap-1">
-										<span class="text-xs text-muted-foreground">Minimum</span>
-										<span
-											class="truncate font-mono text-base font-semibold tabular-nums sm:text-lg"
-										>
-											{formatCurrency(priceRange[0])}
-										</span>
-									</div>
-									<div class="flex min-w-0 flex-col gap-1 text-right">
-										<span class="text-xs text-muted-foreground">Maksimum</span>
-										<span
-											class="truncate font-mono text-base font-semibold tabular-nums sm:text-lg"
-										>
-											{formatCurrency(priceRange[1])}
-										</span>
-									</div>
-								</div>
+							{#if data.priceRange}
+								<Field.Separator />
 
-								<Slider
-									type="multiple"
-									bind:value={priceRange}
-									onValueChange={invalidateResult}
-									min={catalogPriceRange[0]}
-									max={catalogPriceRange[1]}
-									step={100_000}
-									aria-labelledby="budget-label"
-									class="my-2"
-								/>
+								<Form.Field {form} name="priceRange">
+									{#snippet children({ errors })}
+										<Field.Field data-invalid={errors.length > 0}>
+											<div class="flex flex-wrap items-start justify-between gap-3">
+												<Field.Content>
+													<Field.Label id="budget-label">Anggaran pelanggan</Field.Label>
+													<Field.Description>
+														Geser kedua titik untuk menentukan harga minimum dan maksimum.
+													</Field.Description>
+												</Field.Content>
+												<Badge variant={filteredAlternatives.length >= 2 ? 'success' : 'warning'}>
+													{filteredAlternatives.length} motor sesuai
+												</Badge>
+											</div>
 
-								<div class="flex justify-between gap-4 text-xs text-muted-foreground">
-									<span>{formatCurrency(catalogPriceRange[0])}</span>
-									<span>{formatCurrency(catalogPriceRange[1])}</span>
-								</div>
-							</Field.Field>
+											<div class="grid grid-cols-2 gap-4 rounded-xl bg-muted/50 p-4">
+												<div class="flex min-w-0 flex-col gap-1">
+													<span class="text-xs text-muted-foreground">Minimum</span>
+													<span
+														class="truncate font-mono text-base font-semibold tabular-nums sm:text-lg"
+													>
+														{formatCurrency($formData.priceRange[0])}
+													</span>
+												</div>
+												<div class="flex min-w-0 flex-col gap-1 text-right">
+													<span class="text-xs text-muted-foreground">Maksimum</span>
+													<span
+														class="truncate font-mono text-base font-semibold tabular-nums sm:text-lg"
+													>
+														{formatCurrency($formData.priceRange[1])}
+													</span>
+												</div>
+											</div>
+
+											<Form.Control>
+												{#snippet children({ props })}
+													<Slider
+														{...props}
+														type="multiple"
+														bind:value={$formData.priceRange}
+														onValueChange={invalidateResult}
+														min={catalogPriceRange[0]}
+														max={catalogPriceRange[1]}
+														step={100_000}
+														aria-labelledby="budget-label"
+														aria-invalid={errors.length > 0}
+														class="my-2"
+													/>
+												{/snippet}
+											</Form.Control>
+											<Form.FieldErrors />
+
+											<div class="flex justify-between gap-4 text-xs text-muted-foreground">
+												<span>{formatCurrency(catalogPriceRange[0])}</span>
+												<span>{formatCurrency(catalogPriceRange[1])}</span>
+											</div>
+										</Field.Field>
+									{/snippet}
+								</Form.Field>
+							{/if}
 						</Field.Group>
 					</Card.Content>
 
@@ -262,7 +339,12 @@
 							<RotateCcw data-icon="inline-start" />
 							Reset rentang
 						</Button>
-						<Button type="button" class="w-full sm:w-auto" onclick={showCandidates}>
+						<Button
+							type="button"
+							class="w-full sm:w-auto"
+							disabled={!data.priceRange || data.issues.length > 0}
+							onclick={showCandidates}
+						>
 							Tampilkan {filteredAlternatives.length} kandidat
 							<ArrowRight data-icon="inline-end" />
 						</Button>
@@ -282,10 +364,24 @@
 						<div class="flex flex-wrap gap-2">
 							<Badge variant="secondary">{selectedCategoryLabel}</Badge>
 							<Badge variant="outline">
-								{formatCurrency(priceRange[0])}–{formatCurrency(priceRange[1])}
+								{formatCurrency($formData.priceRange[0])}–{formatCurrency($formData.priceRange[1])}
 							</Badge>
 						</div>
 					</header>
+
+					{#if calculationIssues.length}
+						<Alert.Root variant="destructive">
+							<CircleAlert />
+							<Alert.Title>Perhitungan belum dapat dijalankan</Alert.Title>
+							<Alert.Description>
+								<ul class="list-inside list-disc">
+									{#each calculationIssues as issue (issue)}
+										<li>{issue}</li>
+									{/each}
+								</ul>
+							</Alert.Description>
+						</Alert.Root>
+					{/if}
 
 					{#if filteredAlternatives.length === 0}
 						<Empty.Root class="min-h-80 border border-dashed">
@@ -305,6 +401,15 @@
 								<Alert.Description>
 									Perhitungan MOORA memerlukan minimal dua motor. Perluas filter sebelum
 									melanjutkan.
+								</Alert.Description>
+							</Alert.Root>
+						{/if}
+						{#if hasIncompleteCandidates}
+							<Alert.Root variant="destructive">
+								<CircleAlert />
+								<Alert.Title>Data kandidat belum lengkap</Alert.Title>
+								<Alert.Description>
+									Minta admin melengkapi seluruh nilai kriteria sebelum menjalankan perhitungan.
 								</Alert.Description>
 							</Alert.Root>
 						{/if}
@@ -341,21 +446,27 @@
 					<div class="flex flex-col-reverse gap-2 border-t pt-5 sm:flex-row sm:justify-between">
 						<Stepper.Previous>
 							{#snippet child({ props })}
-								<Button {...props} class="w-full sm:w-auto">
+								<Button {...props} type="button" class="w-full sm:w-auto">
 									<ArrowLeft data-icon="inline-start" />
 									Kembali ke kebutuhan
 								</Button>
 							{/snippet}
 						</Stepper.Previous>
-						<Button
-							type="button"
-							class="w-full sm:w-auto"
-							disabled={filteredAlternatives.length < 2}
-							onclick={calculateMockResult}
-						>
-							<Calculator data-icon="inline-start" />
-							Hitung {filteredAlternatives.length} motor
-						</Button>
+						<form method="POST" action="?/calculate" use:enhance class="w-full sm:w-auto">
+							<Button
+								type="submit"
+								class="w-full sm:w-auto"
+								disabled={filteredAlternatives.length < 2 || hasIncompleteCandidates || $submitting}
+							>
+								{#if $submitting}
+									<Spinner data-icon="inline-start" />
+									Menghitung...
+								{:else}
+									<Calculator data-icon="inline-start" />
+									Hitung {filteredAlternatives.length} motor
+								{/if}
+							</Button>
+						</form>
 					</div>
 				</section>
 			{:else if step === 3 && winner}
@@ -372,7 +483,7 @@
 						<div class="flex flex-wrap gap-2">
 							<Badge variant="secondary">{selectedCategoryLabel}</Badge>
 							<Badge variant="outline">
-								{formatCurrency(priceRange[0])}–{formatCurrency(priceRange[1])}
+								{formatCurrency($formData.priceRange[0])}–{formatCurrency($formData.priceRange[1])}
 							</Badge>
 						</div>
 					</header>
