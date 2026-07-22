@@ -14,7 +14,7 @@ import UserIdentityCell from './user-identity-cell.svelte';
 
 const dateFormatter = new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' });
 
-export const columns: ColumnDef<UserRow>[] = [
+export const createColumns = (onEdit: (user: UserRow) => void): ColumnDef<UserRow>[] => [
 	{
 		id: 'identity',
 		accessorFn: (user) => `${user.name} ${user.email}`,
@@ -91,7 +91,7 @@ export const columns: ColumnDef<UserRow>[] = [
 
 			return renderSnippet(header);
 		},
-		cell: ({ row }) => renderComponent(DataTableActions, { user: row.original }),
+		cell: ({ row }) => renderComponent(DataTableActions, { user: row.original, onEdit }),
 		enableHiding: false
 	}
 ];

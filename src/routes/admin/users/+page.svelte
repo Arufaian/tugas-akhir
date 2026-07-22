@@ -3,17 +3,40 @@
 	import UserPlusIcon from '@lucide/svelte/icons/user-plus';
 	import UserXIcon from '@lucide/svelte/icons/user-x';
 	import UsersRoundIcon from '@lucide/svelte/icons/users-round';
+	import { toast } from 'svelte-sonner';
+	import { superForm } from 'sveltekit-superforms';
+	import { zod4Client } from 'sveltekit-superforms/adapters';
 
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { DataTable } from '$lib/components/ui/data-table/index.js';
+	import { updateUserSchema } from '$lib/validations/register.schema.js';
 
 	import type { PageData } from './$types.js';
-	import { columns } from './columns.js';
+	import { createColumns } from './columns.js';
+	import type { UserRow } from './types.js';
+	import UserEditDialog from './user-edit-dialog.svelte';
 	import UserFormDialog from './user-form-dialog.svelte';
 
 	let { data }: { data: PageData } = $props();
 	let dialogOpen = $state(false);
+	let editDialogOpen = $state(false);
+
+	const initialEditForm = () => data.updateForm;
+	const editForm = superForm(initialEditForm(), {
+		validators: zod4Client(updateUserSchema),
+		multipleSubmits: 'prevent',
+		onUpdated({ form }) {
+			if (form.message?.type === 'success') {
+				toast.success(form.message.text);
+				closeEditDialog();
+			} else if (form.message?.type === 'error') {
+				toast.error(form.message.text);
+			}
+		}
+	});
+	const { form: editFormData, reset: resetEditForm } = editForm;
+	const columns = createColumns(openEditDialog);
 
 	const roleOptions = [
 		{ value: 'admin', label: 'Admin' },
@@ -24,6 +47,19 @@
 		{ value: 'true', label: 'Aktif' },
 		{ value: 'false', label: 'Nonaktif' }
 	];
+
+	function openEditDialog(user: UserRow) {
+		resetEditForm();
+		$editFormData.userId = user.id;
+		$editFormData.name = user.name;
+		$editFormData.email = user.email;
+		editDialogOpen = true;
+	}
+
+	function closeEditDialog() {
+		editDialogOpen = false;
+		resetEditForm();
+	}
 </script>
 
 <svelte:head>
@@ -111,3 +147,4 @@
 </div>
 
 <UserFormDialog bind:open={dialogOpen} data={data.form} />
+<UserEditDialog bind:open={editDialogOpen} form={editForm} onClose={closeEditDialog} />

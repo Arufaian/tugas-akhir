@@ -1,6 +1,7 @@
 <script lang="ts">
 	import BanIcon from '@lucide/svelte/icons/ban';
 	import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import RotateCcwIcon from '@lucide/svelte/icons/rotate-ccw';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
@@ -10,7 +11,7 @@
 
 	import type { UserRow } from './types.js';
 
-	let { user }: { user: UserRow } = $props();
+	let { user, onEdit }: { user: UserRow; onEdit: (user: UserRow) => void } = $props();
 	let pending = $state(false);
 
 	async function updateStatus() {
@@ -53,6 +54,10 @@
 		</DropdownMenu.Trigger>
 		<DropdownMenu.Content align="end" class="w-44">
 			<DropdownMenu.Group>
+				<DropdownMenu.Item disabled={pending} onclick={() => onEdit(user)}>
+					<PencilIcon />
+					Edit
+				</DropdownMenu.Item>
 				<DropdownMenu.Item
 					variant={user.isActive ? 'destructive' : 'default'}
 					disabled={pending || (user.isCurrentUser && user.isActive)}

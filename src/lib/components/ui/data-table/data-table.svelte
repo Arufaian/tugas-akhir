@@ -230,7 +230,7 @@
 	</div>
 
 	<div class="flex flex-col items-center gap-4 px-2 pt-4 sm:flex-row sm:justify-between">
-		{#if table.getColumn('select')}
+		{#if table.getAllLeafColumns().some((column) => column.id === 'select')}
 			<div class="text-sm text-muted-foreground">
 				{table.getFilteredSelectedRowModel().rows.length} of
 				{table.getFilteredRowModel().rows.length} row(s) selected.

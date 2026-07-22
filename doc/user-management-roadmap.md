@@ -2,8 +2,9 @@
 
 ## 1. Tujuan
 
-Menyediakan halaman admin untuk melihat pengguna, menambahkan akun sales melalui modal, dan
-mengaktifkan atau menonaktifkan akses login menggunakan Supabase Auth Admin API.
+Menyediakan halaman admin untuk melihat pengguna, menambahkan akun sales melalui modal, mengubah
+nama dan email pengguna, serta mengaktifkan atau menonaktifkan akses login menggunakan Supabase Auth
+Admin API.
 
 Implementasi ditempatkan di `src/routes/admin/users/` dan mengikuti pola halaman
 `src/routes/admin/criteria/`: summary, `DataTable`, filter, serta menu aksi per row.
@@ -15,7 +16,11 @@ Implementasi ditempatkan di `src/routes/admin/users/` dan mengikuti pola halaman
 - Akun yang dibuat admin selalu memiliki role `sales`; form tidak menyediakan pilihan role.
 - Email langsung dikonfirmasi melalui `email_confirm: true` agar akun dapat segera login.
 - Form tambah pengguna ditampilkan dalam `Dialog`, bukan route `/create` terpisah.
-- Aksi row hanya aktifkan/nonaktifkan. Edit, hapus, dan reset password tidak dikerjakan.
+- Aksi row menyediakan edit nama/email serta aktifkan/nonaktifkan.
+- Edit tidak mengubah role, password, atau status pengguna.
+- Admin boleh mengubah nama dan email akunnya sendiri karena UUID dan role tetap.
+- Perubahan email melalui Admin API berlaku langsung tanpa alur konfirmasi pengguna.
+- Hapus pengguna, perubahan role, dan reset password tidak dikerjakan.
 - Admin tidak boleh menonaktifkan akunnya sendiri.
 - UI dibuat dan ditinjau menggunakan data mock sebelum Supabase Admin API dihubungkan.
 - Ringkasan pengguna aktif menampilkan jumlah akun tanpa persentase.
@@ -45,11 +50,26 @@ Status login menggunakan fitur native Supabase:
 - Ban memblokir login dan refresh berikutnya. Token akses yang sudah diterbitkan dapat tetap berlaku
   sampai kedaluwarsa, umumnya maksimal satu jam. Pencabutan akses seketika tidak termasuk scope.
 
+Edit identitas menggunakan dua sumber data yang sudah ada:
+
+- `profiles.name` tetap menjadi sumber nama utama aplikasi.
+- `auth.users.email` tetap menjadi sumber email dan kredensial login.
+- `user_metadata.full_name` hanya dipakai sebagai seed profile dan fallback user tanpa profile, bukan
+  salinan nama yang wajib disinkronkan setelah edit.
+- Action harus mengambil nilai lama dari server. Nilai lama yang dikirim browser tidak boleh dipakai
+  sebagai dasar otorisasi atau kompensasi.
+- Tidak ada transaksi atomik yang dapat mencakup koneksi database dan Supabase Auth Admin API. Jika
+  perubahan kedua gagal setelah perubahan pertama berhasil, lakukan pemulihan nilai lama secara
+  best-effort dan kembalikan error generik.
+- Role dan status tidak diterima oleh action edit agar perubahan identitas tidak dapat dipakai untuk
+  eskalasi akses.
+
 Referensi resmi:
 
 - [API keys](https://supabase.com/docs/guides/api/api-keys)
 - [Create user](https://supabase.com/docs/reference/javascript/auth-admin-createuser)
 - [List users](https://supabase.com/docs/reference/javascript/auth-admin-listusers)
+- [Get user by ID](https://supabase.com/docs/reference/javascript/auth-admin-getuserbyid)
 - [Update user](https://supabase.com/docs/reference/javascript/auth-admin-updateuserbyid)
 
 ## 4. Kontrak Data
@@ -74,10 +94,11 @@ type UserRow = {
 
 Nama dan role berasal dari `profiles`. Email, waktu pembuatan, dan status ban berasal dari Supabase
 Auth. Profile yang tidak ditemukan menggunakan nama metadata atau label netral tanpa menggagalkan
-seluruh halaman. Auth user tanpa email juga menggunakan label netral agar kontrak `UserRow.email`
-tetap berupa string. Role yang tidak tersedia menggunakan fallback `sales`, sesuai invariant trigger
-yang membuat semua akun setelah admin pertama sebagai sales. Tandai fallback ini dengan komentar
-`ponytail:` pada implementasi agar dapat diganti jika role domain bertambah.
+seluruh halaman. Metadata nama tidak ikut diperbarui oleh edit karena `profiles.name` adalah sumber
+utama. Auth user tanpa email juga menggunakan label netral agar kontrak `UserRow.email` tetap berupa
+string. Role yang tidak tersedia menggunakan fallback `sales`, sesuai invariant trigger yang membuat
+semua akun setelah admin pertama sebagai sales. Tandai fallback ini dengan komentar `ponytail:` pada
+implementasi agar dapat diganti jika role domain bertambah.
 
 Batas 1.000 pengguna cukup untuk tahap sekarang. Tambahkan pagination server hanya ketika jumlah
 pengguna mendekati batas tersebut. Jika `listUsers()` melaporkan `total` lebih besar daripada jumlah
@@ -135,11 +156,24 @@ Modal tambah pengguna menggunakan komponen yang sudah terpasang:
 
 Menu actions menggunakan pola dropdown pada halaman criteria:
 
+- Semua user memiliki action **Edit** untuk mengubah nama dan email.
 - User aktif memiliki action **Nonaktifkan**.
 - User nonaktif memiliki action **Aktifkan**.
 - Action dinonaktifkan selama request berlangsung.
 - Akun admin yang sedang login tidak dapat menonaktifkan dirinya sendiri.
 - Perubahan berhasil memicu `invalidateAll()` dan toast.
+
+Modal edit pengguna menggunakan komponen yang sama dengan pola modal tambah, tetapi tetap menjadi
+komponen terpisah agar form password tidak bercampur dengan edit identitas:
+
+- Form hanya memuat hidden UUID, nama, dan email.
+- Nilai nama dan email diisi dari row yang dipilih.
+- Nama dan email menggunakan aturan validasi yang sama dengan registrasi.
+- Submit menggunakan named action `?/update` dan dicegah selama request masih berlangsung.
+- Email yang berhasil diubah langsung dapat dipakai untuk login tanpa konfirmasi tambahan.
+- Edit akun sendiri diperbolehkan; penanda `Anda` tetap mengikuti UUID.
+- Sukses menutup modal, menampilkan toast, dan memuat ulang data halaman.
+- Error validasi tetap ditampilkan pada field, sedangkan error server menggunakan pesan generik.
 
 ### 5.2 Fase UI Mock
 
@@ -205,7 +239,34 @@ Action `create`:
 
 Tidak perlu insert profile kedua dari aplikasi karena akan menduplikasi tanggung jawab trigger.
 
-### 6.3 Ubah Status
+### 6.3 Ubah Nama dan Email
+
+Named action `update`:
+
+1. Validasi hidden UUID dengan `z.uuid()`, lalu validasi nama dan email menggunakan aturan yang sama
+   dengan registrasi.
+2. Ambil Auth user melalui `auth.admin.getUserById()` dan profile target berdasarkan UUID. Jangan
+   mempercayai nilai lama dari browser.
+3. Jika Auth user atau profile tidak tersedia, return `404` tanpa membuat profile pengganti atau
+   melakukan perubahan parsial.
+4. Bandingkan nilai yang sudah dinormalisasi dan lewati write untuk field yang tidak berubah. Submit
+   tanpa perubahan tetap dianggap berhasil agar action idempotent.
+5. Jika nama berubah, update hanya `profiles.name`. Trigger `updated_at` yang sudah ada menangani waktu
+   perubahan profile.
+6. Jika email berubah, panggil `auth.admin.updateUserById()` dengan email baru dan
+   `email_confirm: true`. Jangan mengubah role, password, ban, atau metadata.
+7. Jalankan perubahan profile lebih dahulu. Jika update Auth berikutnya gagal, pulihkan nama profile
+   lama secara best-effort sebelum mengembalikan failure.
+8. `email_exists` dan `user_already_exists` menghasilkan `409` dengan pesan email sudah digunakan.
+   User tidak ditemukan menghasilkan `404`; error Auth, database, atau kompensasi lainnya menghasilkan
+   pesan generik tanpa detail internal.
+9. Edit akun sendiri diperbolehkan karena action tidak menerima role maupun status. Setelah sukses,
+   jalankan invalidasi halaman; tidak perlu memaksa logout atau mencabut session.
+
+Tidak perlu trigger sinkronisasi metadata, queue, atau migration baru. Volume edit rendah dan
+`profiles.name` sudah menjadi sumber nama utama pada layout serta halaman history.
+
+### 6.4 Ubah Status
 
 Endpoint `PATCH /admin/users/[id]`:
 
@@ -218,7 +279,7 @@ Endpoint `PATCH /admin/users/[id]`:
 5. Hitung status response dari `data.user.banned_until`, bukan dari nilai request.
 6. UI menonaktifkan action selama request, lalu menampilkan toast dan menjalankan `invalidateAll()`.
 
-### 6.4 Supabase Admin Client
+### 6.5 Supabase Admin Client
 
 Buat satu singleton di `src/lib/server/supabase-admin.ts`:
 
@@ -231,15 +292,18 @@ Buat satu singleton di `src/lib/server/supabase-admin.ts`:
 ## 7. Perubahan File
 
 - `src/lib/server/supabase-admin.ts`: client Supabase khusus operasi admin.
-- `src/routes/admin/users/+page.server.ts`: load daftar dan action create.
-- `src/routes/admin/users/+page.svelte`: summary, table, dan state modal.
-- `src/routes/admin/users/columns.ts`: definisi kolom dan filter.
+- `src/lib/validations/register.schema.ts`: aturan identitas bersama dan schema update nama/email.
+- `src/routes/admin/users/+page.server.ts`: load daftar serta action create dan update.
+- `src/routes/admin/users/+page.svelte`: summary, table, serta state modal tambah dan edit.
+- `src/routes/admin/users/columns.ts`: definisi kolom, filter, dan callback edit.
 - `src/routes/admin/users/mock-data.ts`: fixture fase UI yang dihapus setelah integrasi.
 - `src/routes/admin/users/types.ts`: kontrak row yang dipakai UI mock dan backend final.
 - `src/routes/admin/users/user-form-dialog.svelte`: form tambah pengguna.
+- `src/routes/admin/users/user-edit-dialog.svelte`: form edit nama dan email.
 - `src/routes/admin/users/user-identity-cell.svelte`: avatar, nama, email, dan label akun sendiri.
-- `src/routes/admin/users/data-table-actions.svelte`: aktifkan/nonaktifkan.
+- `src/routes/admin/users/data-table-actions.svelte`: edit serta aktifkan/nonaktifkan.
 - `src/routes/admin/users/[id]/+server.ts`: endpoint perubahan status.
+- `src/routes/admin/users/page.server.test.ts`: test load, create, dan update identitas.
 - `src/lib/components/ui/data-table/data-table.svelte`: empty message, selection footer, dan getter
   columns.
 - `src/lib/components/app-sidebar.svelte`: menu Users.
@@ -276,6 +340,18 @@ Fase integrasi Supabase:
 11. [x] Jalankan smoke test read-only daftar user terhadap project Supabase.
 12. [x] Jalankan Svelte autofixer, `bun run check`, ESLint changed files, `bun run test`, dan build.
 
+Fase edit identitas:
+
+1. [x] Turunkan schema update UUID, nama, dan email dari aturan registrasi yang sudah ada.
+2. [x] Tambahkan update Superform dan named action `update` dengan lookup server-side, normalisasi,
+       error-code handling, dan kompensasi perubahan lintas sistem.
+3. [x] Tambahkan action **Edit**, state form, dan modal edit nama/email.
+4. [x] Tambahkan test server untuk validasi, sukses, no-op, email duplikat, target hilang, kegagalan
+       Supabase/database, dan kompensasi.
+5. [ ] Verifikasi edit akun sendiri, refresh row/layout, desktop, mobile, keyboard, dan dark mode.
+6. [x] Jalankan Svelte autofixer, `bun run check`, ESLint changed files, dan `bun run test`. Build
+       ditunda atas permintaan.
+
 Test minimum:
 
 - Load memanggil pagination eksplisit, menolak hasil terpotong, menggabungkan profile, mengurutkan
@@ -286,6 +362,10 @@ Test minimum:
   terduga, serta memastikan password tidak ada pada response.
 - Endpoint status menangani UUID/body invalid, deaktivasi akun sendiri, ban, unban, user tidak
   ditemukan, dan error Supabase.
+- Update identitas menangani UUID/nama/email invalid, sukses, submit tanpa perubahan, edit akun
+  sendiri, email duplikat, Auth user/profile hilang, error Supabase/database, dan pemulihan nama ketika
+  update Auth gagal.
+- Update identitas tidak pernah mengirim atau mengubah role, password, status ban, maupun metadata.
 
 ## 9. Kriteria Selesai
 
@@ -296,6 +376,12 @@ Test minimum:
 - Email duplikat dan input tidak valid menghasilkan pesan yang dapat dipahami.
 - Admin dapat menonaktifkan dan mengaktifkan kembali login pengguna.
 - Admin tidak dapat menonaktifkan akunnya sendiri.
+- Admin dapat mengubah nama dan email pengguna, termasuk akunnya sendiri, tanpa mengubah UUID, role,
+  password, atau status.
+- Nama tersimpan pada profile dan email tersimpan pada Supabase Auth; email baru langsung terkonfirmasi
+  dan dapat digunakan untuk login.
+- Email duplikat, target hilang, dan kegagalan lintas sistem menghasilkan pesan aman serta tidak
+  meninggalkan perubahan nama yang diketahui tanpa upaya pemulihan.
 - Status response selalu mengikuti `banned_until` yang dikembalikan Supabase.
 - Secret key tidak pernah dikirim ke browser.
 - Halaman dapat digunakan pada desktop dan mobile.
@@ -303,7 +389,7 @@ Test minimum:
 
 ## 10. Di Luar Cakupan
 
-- Edit nama, email, role, atau password pengguna.
+- Edit role atau password pengguna.
 - Menghapus pengguna.
 - Membuat akun admin dari UI.
 - Memaksa pengguna mengganti password pada login pertama.

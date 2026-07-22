@@ -1,19 +1,41 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockListUsers, mockCreateUser, mockWhere } = vi.hoisted(() => ({
+const {
+	mockListUsers,
+	mockCreateUser,
+	mockGetUserById,
+	mockUpdateUser,
+	mockWhere,
+	mockSet,
+	mockUpdateWhere
+} = vi.hoisted(() => ({
 	mockListUsers: vi.fn(),
 	mockCreateUser: vi.fn(),
-	mockWhere: vi.fn()
+	mockGetUserById: vi.fn(),
+	mockUpdateUser: vi.fn(),
+	mockWhere: vi.fn(),
+	mockSet: vi.fn(),
+	mockUpdateWhere: vi.fn()
 }));
 
 vi.mock('$lib/server/supabase-admin.js', () => ({
 	supabaseAdmin: {
-		auth: { admin: { listUsers: mockListUsers, createUser: mockCreateUser } }
+		auth: {
+			admin: {
+				listUsers: mockListUsers,
+				createUser: mockCreateUser,
+				getUserById: mockGetUserById,
+				updateUserById: mockUpdateUser
+			}
+		}
 	}
 }));
 
 vi.mock('$lib/server/db/index.js', () => ({
-	db: { select: () => ({ from: () => ({ where: mockWhere }) }) }
+	db: {
+		select: () => ({ from: () => ({ where: mockWhere }) }),
+		update: () => ({ set: mockSet })
+	}
 }));
 
 import { actions, load } from './+page.server.js';
@@ -41,10 +63,27 @@ function formRequest(overrides: Record<string, string> = {}) {
 	return new Request('http://localhost/admin/users?/create', { method: 'POST', body: form });
 }
 
+function updateRequest(overrides: Record<string, string> = {}) {
+	const form = new FormData();
+	form.set('userId', salesId);
+	form.set('name', 'Budi Baru');
+	form.set('email', 'baru@example.com');
+	for (const [key, value] of Object.entries(overrides)) form.set(key, value);
+
+	return new Request('http://localhost/admin/users?/update', { method: 'POST', body: form });
+}
+
 describe('user management page server', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mockCreateUser.mockResolvedValue({ data: { user: {} }, error: null });
+		mockGetUserById.mockResolvedValue({
+			data: { user: { id: salesId, email: 'sales@example.com' } },
+			error: null
+		});
+		mockUpdateUser.mockResolvedValue({ data: { user: {} }, error: null });
+		mockUpdateWhere.mockResolvedValue(undefined);
+		mockSet.mockReturnValue({ where: mockUpdateWhere });
 	});
 
 	it('loads users, profiles, status, and summary', async () => {
@@ -167,5 +206,108 @@ describe('user management page server', () => {
 
 		expect(result.status).toBe(500);
 		expect(result.data.form.message.text).toBe('Gagal menambahkan pengguna. Silakan coba lagi.');
+	});
+
+	it('allows the current admin to update their name and confirmed email', async () => {
+		mockWhere.mockResolvedValue([{ name: 'Sales Lama' }]);
+		mockGetUserById.mockResolvedValue({
+			data: { user: { id: adminId, email: 'admin@example.com' } },
+			error: null
+		});
+
+		const result = (await actions.update(event(updateRequest({ userId: adminId })))) as {
+			form: { message: { text: string } };
+		};
+
+		expect(mockSet).toHaveBeenCalledWith({ name: 'Budi Baru' });
+		expect(mockUpdateUser).toHaveBeenCalledWith(adminId, {
+			email: 'baru@example.com',
+			email_confirm: true
+		});
+		expect(result.form.message.text).toBe('Pengguna berhasil diperbarui.');
+	});
+
+	it('skips writes when user identity is unchanged', async () => {
+		mockWhere.mockResolvedValue([{ name: 'Budi Baru' }]);
+		mockGetUserById.mockResolvedValue({
+			data: { user: { id: salesId, email: 'baru@example.com' } },
+			error: null
+		});
+
+		await actions.update(event(updateRequest()));
+
+		expect(mockSet).not.toHaveBeenCalled();
+		expect(mockUpdateUser).not.toHaveBeenCalled();
+	});
+
+	it('returns a generic update error when the profile update fails', async () => {
+		mockWhere.mockResolvedValue([{ name: 'Sales Lama' }]);
+		mockUpdateWhere.mockRejectedValueOnce(new Error('sensitive database error'));
+
+		const result = (await actions.update(event(updateRequest()))) as {
+			status: number;
+			data: { form: { message: { text: string } } };
+		};
+
+		expect(result.status).toBe(500);
+		expect(result.data.form.message.text).toBe('Gagal memperbarui pengguna. Silakan coba lagi.');
+		expect(mockUpdateUser).not.toHaveBeenCalled();
+	});
+
+	it('rejects invalid identity updates', async () => {
+		const result = (await actions.update(event(updateRequest({ userId: 'invalid' })))) as {
+			status: number;
+		};
+
+		expect(result.status).toBe(400);
+		expect(mockGetUserById).not.toHaveBeenCalled();
+		expect(mockSet).not.toHaveBeenCalled();
+	});
+
+	it('restores the old name when the email is already used', async () => {
+		mockWhere.mockResolvedValue([{ name: 'Sales Lama' }]);
+		mockUpdateUser.mockResolvedValue({
+			data: { user: null },
+			error: { code: 'email_exists' }
+		});
+
+		const result = (await actions.update(event(updateRequest()))) as {
+			status: number;
+			data: { form: { message: { text: string } } };
+		};
+
+		expect(mockSet).toHaveBeenNthCalledWith(1, { name: 'Budi Baru' });
+		expect(mockSet).toHaveBeenNthCalledWith(2, { name: 'Sales Lama' });
+		expect(result.status).toBe(409);
+		expect(result.data.form.message.text).toBe('Email sudah digunakan.');
+	});
+
+	it('rejects identity updates for missing users or profiles', async () => {
+		mockWhere.mockResolvedValue([]);
+
+		const result = (await actions.update(event(updateRequest()))) as {
+			status: number;
+			data: { form: { message: { text: string } } };
+		};
+
+		expect(result.status).toBe(404);
+		expect(result.data.form.message.text).toBe('Pengguna tidak ditemukan.');
+		expect(mockSet).not.toHaveBeenCalled();
+		expect(mockUpdateUser).not.toHaveBeenCalled();
+	});
+
+	it('restores the old name when the auth update throws', async () => {
+		mockWhere.mockResolvedValue([{ name: 'Sales Lama' }]);
+		mockUpdateUser.mockRejectedValue(new Error('sensitive network error'));
+
+		const result = (await actions.update(event(updateRequest()))) as {
+			status: number;
+			data: { form: { message: { text: string } } };
+		};
+
+		expect(mockSet).toHaveBeenNthCalledWith(1, { name: 'Budi Baru' });
+		expect(mockSet).toHaveBeenNthCalledWith(2, { name: 'Sales Lama' });
+		expect(result.status).toBe(500);
+		expect(result.data.form.message.text).toBe('Gagal memperbarui pengguna. Silakan coba lagi.');
 	});
 });

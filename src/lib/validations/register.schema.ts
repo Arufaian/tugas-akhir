@@ -1,14 +1,16 @@
 import { z } from 'zod';
 
-export const registerSchema = z
-	.object({
-		name: z
-			.string()
-			.trim()
-			.refine((val) => val.length > 0, { message: 'Nama tidak boleh kosong' })
-			.pipe(z.string().min(3, 'Nama minimal 3 karakter').max(50, 'Nama maksimal 50 karakter')),
+const userIdentitySchema = z.object({
+	name: z
+		.string()
+		.trim()
+		.refine((val) => val.length > 0, { message: 'Nama tidak boleh kosong' })
+		.pipe(z.string().min(3, 'Nama minimal 3 karakter').max(50, 'Nama maksimal 50 karakter')),
+	email: z.string().trim().toLowerCase().pipe(z.email('Format email tidak valid'))
+});
 
-		email: z.string().trim().toLowerCase().pipe(z.email('Format email tidak valid')),
+export const registerSchema = userIdentitySchema
+	.extend({
 		password: z
 			.string()
 			.min(8, 'Password minimal 8 karakter')
@@ -24,5 +26,8 @@ export const registerSchema = z
 		path: ['confirmPassword']
 	});
 
+export const updateUserSchema = userIdentitySchema.extend({ userId: z.uuid() });
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type RegisterSchema = typeof registerSchema;
+export type UpdateUserSchema = typeof updateUserSchema;
