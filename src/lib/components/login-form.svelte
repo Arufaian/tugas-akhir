@@ -84,10 +84,6 @@
 						{#snippet children({ props })}
 							<div class="flex items-center">
 								<FormLabel>Password</FormLabel>
-
-								<a href="##" class="ms-auto text-sm underline-offset-4 hover:underline">
-									Lupa password?
-								</a>
 							</div>
 							<Input {...props} type="password" bind:value={$formData.password} />
 						{/snippet}
