@@ -26,7 +26,7 @@ export const actions: Actions = {
 			email,
 			password,
 			options: {
-				emailRedirectTo: `${event.url.origin}/confirm`,
+				emailRedirectTo: `${event.url.origin}/auth/confirm`,
 				data: {
 					full_name: name
 				}
