@@ -3,9 +3,11 @@
 	import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import RotateCcwIcon from '@lucide/svelte/icons/rotate-ccw';
+	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 
+	import ConfirmDeleteDialog from '$lib/components/confirm-delete-dialog.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 
@@ -13,6 +15,7 @@
 
 	let { user, onEdit }: { user: UserRow; onEdit: (user: UserRow) => void } = $props();
 	let pending = $state(false);
+	let deleteDialogOpen = $state(false);
 
 	async function updateStatus() {
 		pending = true;
@@ -31,6 +34,25 @@
 			await invalidateAll();
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : 'Gagal mengubah status pengguna.');
+		} finally {
+			pending = false;
+		}
+	}
+
+	async function deleteUser() {
+		pending = true;
+
+		try {
+			const response = await fetch(`/admin/users/${user.id}`, { method: 'DELETE' });
+			const body = (await response.json().catch(() => ({}))) as { message?: string };
+
+			if (!response.ok) throw new Error(body.message ?? 'Gagal menghapus pengguna.');
+
+			toast.success('Pengguna berhasil dihapus.');
+			deleteDialogOpen = false;
+			await invalidateAll();
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : 'Gagal menghapus pengguna.');
 		} finally {
 			pending = false;
 		}
@@ -71,7 +93,24 @@
 						{pending ? 'Memproses...' : 'Aktifkan'}
 					{/if}
 				</DropdownMenu.Item>
+				<DropdownMenu.Separator />
+				<DropdownMenu.Item
+					variant="destructive"
+					disabled={pending || user.role === 'admin'}
+					onclick={() => (deleteDialogOpen = true)}
+				>
+					<Trash2Icon />
+					{user.role === 'admin' ? 'Admin tidak dapat dihapus' : 'Hapus'}
+				</DropdownMenu.Item>
 			</DropdownMenu.Group>
 		</DropdownMenu.Content>
 	</DropdownMenu.Root>
 </div>
+
+<ConfirmDeleteDialog
+	bind:open={deleteDialogOpen}
+	name={user.name}
+	loading={pending}
+	onConfirm={deleteUser}
+	title="Hapus Pengguna"
+/>
