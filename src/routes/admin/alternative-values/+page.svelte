@@ -12,6 +12,8 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import * as Empty from '$lib/components/ui/empty/index.js';
 	import * as Item from '$lib/components/ui/item/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import * as Pagination from '$lib/components/ui/pagination/index.js';
 	import { Progress } from '$lib/components/ui/progress/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import { Spinner } from '$lib/components/ui/spinner/index.js';
@@ -29,11 +31,14 @@
 	import type { PageData } from './$types.js';
 
 	type Alternative = PageData['completeness']['alternatives'][number];
+	const pageSize = 10;
 
 	let { data }: { data: PageData } = $props();
 	let selectedAlternative = $state<Alternative | null>(null);
 	let clearDialogOpen = $state(false);
 	let isClearing = $state(false);
+	let searchQuery = $state('');
+	let pageNumber = $state(1);
 
 	function openClearDialog(alternative: Alternative) {
 		selectedAlternative = alternative;
@@ -52,6 +57,20 @@
 			? [`${data.emptyScaleCriteria.length} kriteria skala belum punya opsi.`]
 			: [])
 	]);
+	// ponytail: keep search local while this page already loads the full matrix; move search and
+	// pagination server-side together if the list grows to thousands of alternatives.
+	const filteredAlternatives = $derived.by(() => {
+		const query = searchQuery.trim().toLowerCase();
+
+		return query
+			? data.completeness.alternatives.filter((alternative) =>
+					`${alternative.code} ${alternative.name}`.toLowerCase().includes(query)
+				)
+			: data.completeness.alternatives;
+	});
+	const paginatedAlternatives = $derived(
+		filteredAlternatives.slice((pageNumber - 1) * pageSize, pageNumber * pageSize)
+	);
 </script>
 
 <svelte:head>
@@ -182,102 +201,160 @@
 					Lengkapi semua kriteria aktif sebelum menjalankan perhitungan MOORA.
 				</Card.Description>
 			</Card.Header>
-			<Card.Content>
-				<Item.Group class="gap-0 rounded-xl border bg-card p-1">
-					{#each data.completeness.alternatives as alternative, index (alternative.id)}
-						<Item.Root size="sm">
-							<Item.Content class="min-w-0 gap-2">
-								<Item.Title class="flex w-full flex-wrap items-center gap-2">
-									<div class="items-centar flex justify-center gap-2">
-										<Badge>
-											{alternative.code}
-										</Badge>
-										<span class="min-w-0 truncate font-semibold">{alternative.name}</span>
-									</div>
+			<Card.Content class="space-y-4">
+				<label for="alternative-search" class="sr-only">Cari alternatif</label>
+				<Input
+					id="alternative-search"
+					type="search"
+					placeholder="Cari kode atau nama alternatif..."
+					bind:value={searchQuery}
+					oninput={() => (pageNumber = 1)}
+					class="max-w-sm"
+				/>
 
-									<Separator
-										orientation="vertical"
-										class=" hidden data-[orientation=vertical]:h-4 sm:block"
-									/>
-
-									{#if alternative.isComplete}
-										<Badge variant="success">Lengkap</Badge>
-									{:else}
-										<div class="item-center flex justify-center gap-2">
-											{#each alternative.missingCriteria as criterion (criterion.id)}
-												<Badge
-													variant="destructive"
-													title={criterion.reason === 'invalid_scale'
-														? 'Skala tidak valid'
-														: undefined}
-												>
-													{criterion.code}
-												</Badge>
-											{/each}
+				{#if filteredAlternatives.length === 0}
+					<Empty.Root class="border border-dashed">
+						<Empty.Header>
+							<Empty.Title>Alternatif tidak ditemukan</Empty.Title>
+							<Empty.Description>Coba gunakan kode atau nama yang berbeda.</Empty.Description>
+						</Empty.Header>
+					</Empty.Root>
+				{:else}
+					<Item.Group class="gap-0 rounded-xl border bg-card p-1">
+						{#each paginatedAlternatives as alternative, index (alternative.id)}
+							<Item.Root size="sm">
+								<Item.Content class="min-w-0 gap-2">
+									<Item.Title class="flex w-full flex-wrap items-center gap-2">
+										<div class="items-centar flex justify-center gap-2">
+											<Badge>
+												{alternative.code}
+											</Badge>
+											<span class="min-w-0 truncate font-semibold">{alternative.name}</span>
 										</div>
-									{/if}
-								</Item.Title>
 
-								<Item.Footer class="flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-									<div class="flex items-center justify-between text-sm sm:w-40">
-										<span class="text-muted-foreground">Kriteria terisi</span>
-										<span class="shrink-0 font-medium tabular-nums">
-											{alternative.filledCount} / {data.criteria.length}
-										</span>
-									</div>
-									<div class="flex min-w-0 flex-1 items-center gap-2">
-										<Progress
-											class="min-w-0 flex-1"
-											value={alternative.filledCount}
-											max={data.criteria.length}
+										<Separator
+											orientation="vertical"
+											class=" hidden data-[orientation=vertical]:h-4 sm:block"
 										/>
-										<Item.Actions>
-											<DropdownMenu.Root>
-												<DropdownMenu.Trigger>
-													{#snippet child({ props })}
-														<Button
-															{...props}
-															variant="ghost"
-															size="icon-sm"
-															aria-label={`Aksi untuk ${alternative.name}`}
-														>
-															<Ellipsis />
-														</Button>
-													{/snippet}
-												</DropdownMenu.Trigger>
-												<DropdownMenu.Content align="end" class="w-40">
-													<DropdownMenu.Group>
-														<DropdownMenu.Item
-															onclick={() =>
-																goto(resolve(`/admin/alternatives/${alternative.id}/values`))}
-														>
-															<PencilLine />
-															Nilai
-														</DropdownMenu.Item>
-													</DropdownMenu.Group>
-													<DropdownMenu.Separator />
-													<DropdownMenu.Group>
-														<DropdownMenu.Item
-															variant="destructive"
-															disabled={alternative.filledCount === 0}
-															onclick={() => openClearDialog(alternative)}
-														>
-															<RotateCcw />
-															Clear nilai
-														</DropdownMenu.Item>
-													</DropdownMenu.Group>
-												</DropdownMenu.Content>
-											</DropdownMenu.Root>
-										</Item.Actions>
-									</div>
-								</Item.Footer>
-							</Item.Content>
-						</Item.Root>
-						{#if index < data.completeness.alternatives.length - 1}
-							<Item.Separator class="my-0" />
+
+										{#if alternative.isComplete}
+											<Badge variant="success">Lengkap</Badge>
+										{:else}
+											<div class="item-center flex justify-center gap-2">
+												{#each alternative.missingCriteria as criterion (criterion.id)}
+													<Badge
+														variant="destructive"
+														title={criterion.reason === 'invalid_scale'
+															? 'Skala tidak valid'
+															: undefined}
+													>
+														{criterion.code}
+													</Badge>
+												{/each}
+											</div>
+										{/if}
+									</Item.Title>
+
+									<Item.Footer class="flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+										<div class="flex items-center justify-between text-sm sm:w-40">
+											<span class="text-muted-foreground">Kriteria terisi</span>
+											<span class="shrink-0 font-medium tabular-nums">
+												{alternative.filledCount} / {data.criteria.length}
+											</span>
+										</div>
+										<div class="flex min-w-0 flex-1 items-center gap-2">
+											<Progress
+												class="min-w-0 flex-1"
+												value={alternative.filledCount}
+												max={data.criteria.length}
+											/>
+											<Item.Actions>
+												<DropdownMenu.Root>
+													<DropdownMenu.Trigger>
+														{#snippet child({ props })}
+															<Button
+																{...props}
+																variant="ghost"
+																size="icon-sm"
+																aria-label={`Aksi untuk ${alternative.name}`}
+															>
+																<Ellipsis />
+															</Button>
+														{/snippet}
+													</DropdownMenu.Trigger>
+													<DropdownMenu.Content align="end" class="w-40">
+														<DropdownMenu.Group>
+															<DropdownMenu.Item
+																onclick={() =>
+																	goto(resolve(`/admin/alternatives/${alternative.id}/values`))}
+															>
+																<PencilLine />
+																Nilai
+															</DropdownMenu.Item>
+														</DropdownMenu.Group>
+														<DropdownMenu.Separator />
+														<DropdownMenu.Group>
+															<DropdownMenu.Item
+																variant="destructive"
+																disabled={alternative.filledCount === 0}
+																onclick={() => openClearDialog(alternative)}
+															>
+																<RotateCcw />
+																Clear nilai
+															</DropdownMenu.Item>
+														</DropdownMenu.Group>
+													</DropdownMenu.Content>
+												</DropdownMenu.Root>
+											</Item.Actions>
+										</div>
+									</Item.Footer>
+								</Item.Content>
+							</Item.Root>
+							{#if index < paginatedAlternatives.length - 1}
+								<Item.Separator class="my-0" />
+							{/if}
+						{/each}
+					</Item.Group>
+
+					<div class="flex flex-col items-center justify-between gap-3 sm:flex-row">
+						<p class="text-xs text-muted-foreground">
+							Menampilkan {(pageNumber - 1) * pageSize + 1}–{Math.min(
+								pageNumber * pageSize,
+								filteredAlternatives.length
+							)} dari {filteredAlternatives.length} alternatif
+						</p>
+						{#if filteredAlternatives.length > pageSize}
+							<Pagination.Root
+								count={filteredAlternatives.length}
+								perPage={pageSize}
+								bind:page={pageNumber}
+								class="mx-0 w-auto"
+							>
+								{#snippet children({ pages, currentPage })}
+									<Pagination.Content>
+										<Pagination.Item>
+											<Pagination.Previous />
+										</Pagination.Item>
+										{#each pages as page (page.key)}
+											{#if page.type === 'ellipsis'}
+												<Pagination.Item>
+													<Pagination.Ellipsis />
+												</Pagination.Item>
+											{:else}
+												<Pagination.Item>
+													<Pagination.Link {page} isActive={currentPage === page.value} />
+												</Pagination.Item>
+											{/if}
+										{/each}
+										<Pagination.Item>
+											<Pagination.Next />
+										</Pagination.Item>
+									</Pagination.Content>
+								{/snippet}
+							</Pagination.Root>
 						{/if}
-					{/each}
-				</Item.Group>
+					</div>
+				{/if}
 			</Card.Content>
 		</Card.Root>
 	{/if}
