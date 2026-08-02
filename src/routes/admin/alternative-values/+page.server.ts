@@ -7,7 +7,7 @@ import {
 	criterionScalesTable
 } from '$lib/server/db/schema';
 import { checkDecisionMatrixCompleteness } from '$lib/server/services/decision-matrix.js';
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import type { Actions } from './$types.js';
@@ -23,7 +23,7 @@ export async function load() {
 		})
 		.from(alternativesTable)
 		.where(eq(alternativesTable.isActive, true))
-		.orderBy(asc(alternativesTable.code));
+		.orderBy(asc(sql`CAST(SUBSTRING(${alternativesTable.code} FROM 2) AS INTEGER)`));
 
 	const criteria = await db
 		.select({
