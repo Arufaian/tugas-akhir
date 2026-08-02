@@ -199,6 +199,38 @@ describe('sales calculation backend', () => {
 		setupData();
 		mockCalculateMoora.mockReturnValue({
 			success: true,
+			details: [
+				{
+					alternativeId: 'a2',
+					criterionId: 'c1',
+					criterionName: 'Harga',
+					criterionUnit: 'Rp',
+					criterionType: 'cost',
+					rawValue: 25_000_000,
+					labelValue: null,
+					weight: 0.5
+				},
+				{
+					alternativeId: 'a2',
+					criterionId: 'c2',
+					criterionName: 'Kualitas',
+					criterionUnit: 'poin',
+					criterionType: 'benefit',
+					rawValue: 20,
+					labelValue: null,
+					weight: 0.5
+				},
+				{
+					alternativeId: 'a1',
+					criterionId: 'c1',
+					criterionName: 'Harga',
+					criterionUnit: 'Rp',
+					criterionType: 'cost',
+					rawValue: 20_000_000,
+					labelValue: null,
+					weight: 0.5
+				}
+			],
 			results: [
 				{
 					id: 'a2',
@@ -233,6 +265,26 @@ describe('sales calculation backend', () => {
 		expect(result).toMatchObject({
 			calculation: {
 				filter: { category: 'Matic', priceRange: [20_000_000, 25_000_000] },
+				winnerCriteria: [
+					{
+						criterionId: 'c1',
+						name: 'Harga',
+						unit: 'Rp',
+						type: 'cost',
+						rawValue: 25_000_000,
+						labelValue: null,
+						weight: 0.5
+					},
+					{
+						criterionId: 'c2',
+						name: 'Kualitas',
+						unit: 'poin',
+						type: 'benefit',
+						rawValue: 20,
+						labelValue: null,
+						weight: 0.5
+					}
+				],
 				results: [
 					{ id: 'a2', rank: 1, price: 25_000_000 },
 					{ id: 'a1', rank: 2, price: 20_000_000 }

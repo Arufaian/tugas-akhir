@@ -205,6 +205,17 @@ export const actions: Actions = {
 						category: form.data.category,
 						priceRange: form.data.priceRange
 					},
+					winnerCriteria: calculation.details
+						.filter((detail) => detail.alternativeId === calculation.results[0].id)
+						.map((detail) => ({
+							criterionId: detail.criterionId,
+							name: detail.criterionName,
+							unit: detail.criterionUnit,
+							type: detail.criterionType,
+							rawValue: detail.rawValue,
+							labelValue: detail.labelValue,
+							weight: detail.weight
+						})),
 					results: calculation.results.map((result) => ({
 						...candidatesById.get(result.id)!,
 						totalBenefit: result.totalBenefit,

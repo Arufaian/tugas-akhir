@@ -31,6 +31,7 @@
 	import type { ActionData, PageProps } from './$types.js';
 
 	type Calculation = NonNullable<NonNullable<ActionData>['calculation']>;
+	type WinnerCriterion = Calculation['winnerCriteria'][number];
 
 	let { data }: PageProps = $props();
 	let step = $state(1);
@@ -76,6 +77,11 @@
 		minimumFractionDigits: 6,
 		maximumFractionDigits: 6
 	});
+	const valueFormatter = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 });
+	const percentFormatter = new Intl.NumberFormat('id-ID', {
+		style: 'percent',
+		maximumFractionDigits: 2
+	});
 
 	let catalogPriceRange = $derived(data.priceRange ?? [0, 0]);
 	let categoryOptions = $derived([
@@ -101,6 +107,11 @@
 	);
 	let rankedAlternatives = $derived(calculation?.results ?? []);
 	let winner = $derived(rankedAlternatives[0]);
+	let runnerUp = $derived(rankedAlternatives[1]);
+	let winnerCriteria = $derived(calculation?.winnerCriteria ?? []);
+	let scoreGap = $derived(
+		winner && runnerUp ? winner.optimizationScore - runnerUp.optimizationScore : null
+	);
 	let canAccessCandidates = $derived(reviewedFilterKey === filterKey);
 	let canAccessResults = $derived(
 		calculatedFilterKey === filterKey && rankedAlternatives.length >= 2
@@ -129,6 +140,14 @@
 	function formatCurrency(value: number): string {
 		return currencyFormatter.format(value);
 	}
+
+	function formatCriterionValue(criterion: WinnerCriterion): string {
+		if (criterion.labelValue) return criterion.labelValue;
+		if (criterion.unit === 'Rp') return formatCurrency(criterion.rawValue);
+
+		const value = valueFormatter.format(criterion.rawValue);
+		return criterion.unit ? `${value} ${criterion.unit}` : value;
+	}
 </script>
 
 <svelte:head>
@@ -143,17 +162,14 @@
 	<header class="flex max-w-3xl flex-col items-start gap-4">
 		<Badge variant="outline">
 			<Motorbike data-icon="inline-start" />
-			Simulasi MOORA
+			Simulasi Perhitungan MOORA
 		</Badge>
 		<div class="flex flex-col gap-2">
-			<p class="text-sm font-semibold tracking-[0.16em] text-primary uppercase">
-				Konsultasi Penjualan
-			</p>
 			<h1 class="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-				Temukan motor yang masuk kebutuhan pelanggan.
+				Pilih motor sesuai kategori dan rentang anggaran
 			</h1>
 			<p class="max-w-2xl leading-7 text-muted-foreground">
-				Saring berdasarkan kategori dan anggaran, tinjau kandidatnya, lalu gunakan hasil MOORA
+				filter berdasarkan kategori dan anggaran, tinjau kandidatnya, lalu gunakan hasil MOORA
 				sebagai dasar rekomendasi.
 			</p>
 		</div>
@@ -512,10 +528,48 @@
 										{scoreFormatter.format(winner.optimizationScore)}
 									</p>
 								</div>
+								<dl class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+									<div class="col-span-2 rounded-lg bg-muted/50 p-3 sm:col-span-1">
+										<dt class="text-xs text-muted-foreground">Peringkat</dt>
+										<dd class="mt-1 font-mono font-semibold tabular-nums">
+											#{winner.rank} dari {rankedAlternatives.length}
+										</dd>
+									</div>
+									<div class="rounded-lg bg-muted/50 p-3">
+										<dt class="text-xs text-muted-foreground">Benefit</dt>
+										<dd class="mt-1 font-mono font-semibold tabular-nums">
+											{scoreFormatter.format(winner.totalBenefit)}
+										</dd>
+									</div>
+									<div class="rounded-lg bg-muted/50 p-3">
+										<dt class="text-xs text-muted-foreground">Cost</dt>
+										<dd class="mt-1 font-mono font-semibold tabular-nums">
+											{scoreFormatter.format(winner.totalCost)}
+										</dd>
+									</div>
+								</dl>
 								<p class="max-w-md leading-6 text-muted-foreground">
-									Motor ini memperoleh nilai optimasi tertinggi di antara kandidat yang memenuhi
-									kategori dan anggaran pelanggan.
+									Skor optimasi diperoleh dari total benefit dikurangi total cost pada seluruh
+									kriteria aktif.
 								</p>
+								{#if runnerUp && scoreGap !== null}
+									<Item.Root variant="outline">
+										<Item.Content>
+											<Item.Description
+												>Pembanding terdekat · peringkat #{runnerUp.rank}</Item.Description
+											>
+											<Item.Title>{runnerUp.name}</Item.Title>
+										</Item.Content>
+										<Item.Actions class="ms-auto flex-col items-end">
+											<span class="font-mono text-sm font-semibold tabular-nums">
+												{scoreFormatter.format(runnerUp.optimizationScore)}
+											</span>
+											<span class="text-xs text-muted-foreground">
+												Selisih {scoreFormatter.format(scoreGap)}
+											</span>
+										</Item.Actions>
+									</Item.Root>
+								{/if}
 							</div>
 							<div class="aspect-4/3 rounded-xl bg-muted/40 p-6 sm:p-8">
 								<img
@@ -525,6 +579,36 @@
 								/>
 							</div>
 						</Card.Content>
+						{#if winnerCriteria.length}
+							<Card.Footer class="relative flex-col items-stretch gap-4 border-t">
+								<div class="flex flex-col gap-1">
+									<h3 class="font-display text-lg font-semibold">Dasar penilaian</h3>
+									<p class="text-sm text-muted-foreground">
+										Nilai motor pada setiap kriteria beserta jenis dan bobotnya.
+									</p>
+								</div>
+								<dl class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+									{#each winnerCriteria as criterion (criterion.criterionId)}
+										<div class="flex min-w-0 flex-col gap-2 rounded-lg border p-4">
+											<dt class="text-sm text-muted-foreground">{criterion.name}</dt>
+											<dd class="flex flex-1 flex-col gap-2">
+												<span class="font-medium wrap-break-word">
+													{formatCriterionValue(criterion)}
+												</span>
+												<span
+													class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
+												>
+													<Badge variant={criterion.type === 'benefit' ? 'success' : 'destructive'}>
+														{criterion.type === 'benefit' ? 'Benefit' : 'Cost'}
+													</Badge>
+													Bobot {percentFormatter.format(criterion.weight)}
+												</span>
+											</dd>
+										</div>
+									{/each}
+								</dl>
+							</Card.Footer>
+						{/if}
 					</Card.Root>
 
 					<Card.Root>
