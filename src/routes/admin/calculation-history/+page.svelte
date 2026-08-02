@@ -69,7 +69,7 @@
 			<Card.Header>
 				<Card.Title class="flex items-center gap-2">
 					<History />
-					Calculation run
+					List riwayat perhitungan
 				</Card.Title>
 				<Card.Description>Urutan terbaru berdasarkan waktu perhitungan.</Card.Description>
 			</Card.Header>

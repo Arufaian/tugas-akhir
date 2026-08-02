@@ -121,7 +121,7 @@
 			<Card.Header>
 				<Card.Title class="flex items-center gap-2">
 					<CalendarClock />
-					Run terbaru
+					Perhitungan terakhir
 				</Card.Title>
 				<Card.Description>
 					{data.run.name} · {runDateFormatter.format(data.run.createdAt)} WIB
