@@ -33,7 +33,7 @@
 				<h1
 					class="font-display text-4xl leading-[1.05] font-semibold tracking-tight sm:text-5xl lg:text-6xl"
 				>
-					Pilih motor dengan alasan yang bisa dijelaskan.
+					Bandingkan motor. Tentukan pilihan berdasarkan data.
 				</h1>
 				<p class="max-w-2xl font-sans text-base leading-7 text-muted-foreground sm:text-lg">
 					Bandingkan setiap alternatif secara konsisten berdasarkan kriteria benefit dan cost, lalu
@@ -99,9 +99,9 @@
 					<span class="font-mono text-sm text-muted-foreground">01</span>
 				</div>
 				<div class="flex flex-col gap-2">
-					<h3 class="font-display text-lg font-semibold">Kelola alternatif</h3>
+					<h3 class="font-display text-lg font-semibold">Kelola alternatif dan kriteria</h3>
 					<p class="font-sans text-sm leading-6 text-muted-foreground">
-						Siapkan data motor yang akan dibandingkan dalam satu decision matrix.
+						Siapkan data motor dan kriteria penilaian.
 					</p>
 				</div>
 			</li>
@@ -113,7 +113,7 @@
 				<div class="flex flex-col gap-2">
 					<h3 class="font-display text-lg font-semibold">Nilai setiap kriteria</h3>
 					<p class="font-sans text-sm leading-6 text-muted-foreground">
-						Gunakan bobot benefit dan cost yang sama untuk menilai seluruh alternatif.
+						Nilai alternatif berdasarkan kriterianya.
 					</p>
 				</div>
 			</li>
@@ -125,7 +125,7 @@
 				<div class="flex flex-col gap-2">
 					<h3 class="font-display text-lg font-semibold">Lihat hasil peringkat</h3>
 					<p class="font-sans text-sm leading-6 text-muted-foreground">
-						Tinjau skor optimasi sebagai dasar rekomendasi yang dapat dijelaskan.
+						Tinjau skor optimasi sebagai dasar rekomendasi.
 					</p>
 				</div>
 			</li>
