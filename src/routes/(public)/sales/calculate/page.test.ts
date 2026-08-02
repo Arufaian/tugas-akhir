@@ -160,6 +160,41 @@ describe('sales calculation backend', () => {
 		expect(mockCalculateMoora).not.toHaveBeenCalled();
 	});
 
+	it('stops when the catalog has configuration issues', async () => {
+		setupData({ criterionRows: criteria.map((criterion) => ({ ...criterion, isPrice: false })) });
+
+		const result = await actions.calculate!(calculationEvent('all', [20_000_000, 30_000_000]));
+
+		expect(result).toMatchObject({
+			status: 400,
+			data: { issues: ['Admin belum menetapkan kriteria sumber harga'] }
+		});
+		expect(mockCalculateMoora).not.toHaveBeenCalled();
+	});
+
+	it('rejects a category that is not available', async () => {
+		setupData();
+
+		const result = await actions.calculate!(
+			calculationEvent('Kategori Tidak Ada', [20_000_000, 30_000_000])
+		);
+
+		expect(result).toMatchObject({ status: 400 });
+		expect(mockCalculateMoora).not.toHaveBeenCalled();
+	});
+
+	it('stops before MOORA when no candidates match', async () => {
+		setupData();
+
+		const result = await actions.calculate!(calculationEvent('Matic', [40_000_000, 50_000_000]));
+
+		expect(result).toMatchObject({
+			status: 400,
+			data: { issues: ['Tidak ada motor yang sesuai dengan filter'] }
+		});
+		expect(mockCalculateMoora).not.toHaveBeenCalled();
+	});
+
 	it('filters inclusive boundaries and calculates only the matching candidates', async () => {
 		setupData();
 		mockCalculateMoora.mockReturnValue({
@@ -232,5 +267,27 @@ describe('sales calculation backend', () => {
 			data: { issues: ['Data kandidat belum lengkap'] }
 		});
 		expect(mockCalculateMoora).not.toHaveBeenCalled();
+	});
+
+	it('returns MOORA validation issues', async () => {
+		setupData();
+		mockCalculateMoora.mockReturnValue({ success: false, issues: ['Bobot tidak valid'] });
+
+		const result = await actions.calculate!(calculationEvent('Matic', [20_000_000, 25_000_000]));
+
+		expect(result).toMatchObject({ status: 400, data: { issues: ['Bobot tidak valid'] } });
+	});
+
+	it('returns a generic error when calculation throws', async () => {
+		mockSelect.mockImplementationOnce(() => {
+			throw new Error('database unavailable');
+		});
+
+		const result = await actions.calculate!(calculationEvent('all', [20_000_000, 30_000_000]));
+
+		expect(result).toMatchObject({
+			status: 500,
+			data: { issues: ['Gagal menjalankan perhitungan MOORA'] }
+		});
 	});
 });

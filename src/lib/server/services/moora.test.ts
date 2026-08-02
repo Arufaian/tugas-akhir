@@ -89,6 +89,21 @@ function singleCriterionInput({
 }
 
 describe('calculateMoora', () => {
+	it.each([
+		{
+			name: 'alternatives',
+			input: { ...guideInput(), alternatives: [], values: [] },
+			issue: 'Belum ada alternative aktif'
+		},
+		{
+			name: 'criteria',
+			input: { ...guideInput(), criteria: [], values: [] },
+			issue: 'Belum ada criterion aktif'
+		}
+	])('rejects empty $name', ({ input, issue }) => {
+		expect(calculateMoora(input)).toEqual({ success: false, issues: [issue] });
+	});
+
 	it('calculates matrices, scores, ranking, and snapshots', () => {
 		const result = calculateMoora(guideInput());
 
