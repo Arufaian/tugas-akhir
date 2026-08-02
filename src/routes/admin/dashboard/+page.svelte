@@ -46,7 +46,8 @@
 			data.latestRun.alternatives.map((alternative) => [alternative.id, alternative])
 		);
 
-		return data.latestRun.results.map((result) => {
+		// ponytail: dashboard only needs the top five; the detail page keeps the full ranking.
+		return data.latestRun.results.slice(0, 5).map((result) => {
 			const alternative = alternatives.get(result.alternativeId);
 
 			return {
@@ -78,7 +79,7 @@
 	<header class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 		<div class="flex min-w-0 flex-col gap-1">
 			<div class="flex flex-wrap items-center gap-2">
-				<h1 class="font-display text-2xl font-semibold tracking-tight">Dashboard Keputusan</h1>
+				<h1 class="font-display text-2xl font-semibold tracking-tight">Dashboard admin</h1>
 				<Badge variant={data.readiness.isReady ? 'success' : 'warning'}>
 					{#if data.readiness.isReady}
 						<CircleCheck data-icon="inline-start" />
@@ -200,7 +201,7 @@
 			<Card.Header>
 				<Card.Title class="flex items-center gap-2">
 					<ChartNoAxesColumnIncreasing />
-					Peringkat MOORA Terbaru
+					Top 5 Peringkat Teratas
 				</Card.Title>
 				<Card.Description>Optimization score dari snapshot perhitungan terakhir.</Card.Description>
 			</Card.Header>
