@@ -68,7 +68,7 @@
 		<div class="flex min-w-0 flex-col gap-1">
 			<div class="flex flex-wrap items-center gap-2">
 				<h1 class="font-display text-2xl font-semibold tracking-tight">Perhitungan MOORA</h1>
-				<Badge variant={data.readiness.isReady ? 'success' : 'warning'}>
+				<Badge variant={data.readiness.isReady ? 'success' : 'destructive'}>
 					<CircleCheck data-icon="inline-start" />
 					{data.readiness.isReady ? 'Siap dihitung' : 'Perlu diperiksa'}
 				</Badge>
@@ -124,7 +124,7 @@
 					Perhitungan terakhir
 				</Card.Title>
 				<Card.Description>
-					{data.run.name} · {runDateFormatter.format(data.run.createdAt)} WIB
+					{runDateFormatter.format(data.run.createdAt)} WIB
 				</Card.Description>
 			</Card.Header>
 			<Card.Content class="flex flex-wrap items-center gap-3 text-sm">
