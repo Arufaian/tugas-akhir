@@ -197,6 +197,15 @@ export const actions: Actions = {
 			if (!calculation.success) return fail(400, { form, issues: calculation.issues });
 
 			const candidatesById = new Map(candidates.map((candidate) => [candidate.id, candidate]));
+			const toCriterion = (detail: (typeof calculation.details)[number]) => ({
+				criterionId: detail.criterionId,
+				name: detail.criterionName,
+				unit: detail.criterionUnit,
+				type: detail.criterionType,
+				rawValue: detail.rawValue,
+				labelValue: detail.labelValue,
+				weight: detail.weight
+			});
 
 			return {
 				form,
@@ -205,23 +214,15 @@ export const actions: Actions = {
 						category: form.data.category,
 						priceRange: form.data.priceRange
 					},
-					winnerCriteria: calculation.details
-						.filter((detail) => detail.alternativeId === calculation.results[0].id)
-						.map((detail) => ({
-							criterionId: detail.criterionId,
-							name: detail.criterionName,
-							unit: detail.criterionUnit,
-							type: detail.criterionType,
-							rawValue: detail.rawValue,
-							labelValue: detail.labelValue,
-							weight: detail.weight
-						})),
 					results: calculation.results.map((result) => ({
 						...candidatesById.get(result.id)!,
 						totalBenefit: result.totalBenefit,
 						totalCost: result.totalCost,
 						optimizationScore: result.optimizationScore,
-						rank: result.rank
+						rank: result.rank,
+						criteria: calculation.details
+							.filter((detail) => detail.alternativeId === result.id)
+							.map(toCriterion)
 					}))
 				}
 			};

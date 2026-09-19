@@ -13,6 +13,7 @@
 	import { zod4Client } from 'sveltekit-superforms/adapters';
 
 	import yamahaLogo from '$lib/assets/favicon1.png';
+	import * as Accordion from '$lib/components/ui/accordion/index.js';
 	import * as Alert from '$lib/components/ui/alert/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -31,7 +32,7 @@
 	import type { ActionData, PageProps } from './$types.js';
 
 	type Calculation = NonNullable<NonNullable<ActionData>['calculation']>;
-	type WinnerCriterion = Calculation['winnerCriteria'][number];
+	type WinnerCriterion = Calculation['results'][number]['criteria'][number];
 
 	let { data }: PageProps = $props();
 	let step = $state(1);
@@ -108,7 +109,7 @@
 	let rankedAlternatives = $derived(calculation?.results ?? []);
 	let winner = $derived(rankedAlternatives[0]);
 	let runnerUp = $derived(rankedAlternatives[1]);
-	let winnerCriteria = $derived(calculation?.winnerCriteria ?? []);
+	let winnerCriteria = $derived(rankedAlternatives[0]?.criteria ?? []);
 	let scoreGap = $derived(
 		winner && runnerUp ? winner.optimizationScore - runnerUp.optimizationScore : null
 	);
@@ -619,28 +620,61 @@
 							</Card.Description>
 						</Card.Header>
 						<Card.Content>
-							<Item.Group>
-								{#each rankedAlternatives as alternative, index (alternative.id)}
-									<Item.Root role="listitem" variant={index === 0 ? 'muted' : 'default'}>
-										<Item.Media variant="image">
-											<img src={alternative.imageUrl ?? yamahaLogo} alt="" />
-										</Item.Media>
-										<Item.Content>
-											<Item.Title>{alternative.name}</Item.Title>
-											<Item.Description>
-												{alternative.category} · {formatCurrency(alternative.price)}
-											</Item.Description>
-										</Item.Content>
-										<Item.Actions class="ms-auto flex-col items-end">
-											<Badge variant={index === 0 ? 'default' : 'outline'}>#{index + 1}</Badge>
-											<span class="font-mono text-xs text-muted-foreground tabular-nums">
-												{scoreFormatter.format(alternative.optimizationScore)}
+							<Accordion.Root type="multiple">
+								{#each rankedAlternatives as alternative (alternative.id)}
+									<Accordion.Item value={alternative.id}>
+										<Accordion.Trigger class="items-center gap-3 hover:no-underline">
+											<span class="size-10 shrink-0 overflow-hidden rounded-sm">
+												<img
+													src={alternative.imageUrl ?? yamahaLogo}
+													alt=""
+													class="size-full object-cover"
+												/>
 											</span>
-										</Item.Actions>
-									</Item.Root>
-									{#if index < rankedAlternatives.length - 1}<Item.Separator />{/if}
+											<span class="flex min-w-0 flex-1 flex-col gap-0.5 text-left">
+												<span class="truncate font-medium">{alternative.name}</span>
+												<span class="truncate text-xs font-normal text-muted-foreground">
+													{alternative.category} · {formatCurrency(alternative.price)}
+												</span>
+											</span>
+											<span class="flex shrink-0 flex-col items-end gap-1 pe-1">
+												<Badge variant={alternative.rank === 1 ? 'default' : 'outline'}>
+													#{alternative.rank}
+												</Badge>
+												<span
+													class="font-mono text-xs font-normal text-muted-foreground tabular-nums"
+												>
+													{scoreFormatter.format(alternative.optimizationScore)}
+												</span>
+											</span>
+										</Accordion.Trigger>
+										<Accordion.Content>
+											{#if alternative.criteria.length}
+												<dl class="grid gap-2 sm:grid-cols-2">
+													{#each alternative.criteria as criterion (criterion.criterionId)}
+														<div class="flex min-w-0 flex-col gap-1 rounded-md border px-3 py-2">
+															<dt class="text-xs text-muted-foreground">{criterion.name}</dt>
+															<dd class="flex flex-wrap items-center gap-2 text-sm">
+																<span class="font-medium wrap-break-word">
+																	{formatCriterionValue(criterion)}
+																</span>
+																<Badge
+																	variant={criterion.type === 'benefit' ? 'success' : 'destructive'}
+																>
+																	{criterion.type === 'benefit' ? 'Benefit' : 'Cost'}
+																</Badge>
+																<span class="text-xs text-muted-foreground">
+																	Bobot {percentFormatter.format(criterion.weight)}
+																</span>
+															</dd>
+														</div>
+													{/each}
+												</dl>
+											{/if}
+										</Accordion.Content>
+									</Accordion.Item>
 								{/each}
-							</Item.Group>
+							</Accordion.Root>
 						</Card.Content>
 					</Card.Root>
 

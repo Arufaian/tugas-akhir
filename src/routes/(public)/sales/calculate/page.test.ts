@@ -265,29 +265,33 @@ describe('sales calculation backend', () => {
 		expect(result).toMatchObject({
 			calculation: {
 				filter: { category: 'Matic', priceRange: [20_000_000, 25_000_000] },
-				winnerCriteria: [
-					{
-						criterionId: 'c1',
-						name: 'Harga',
-						unit: 'Rp',
-						type: 'cost',
-						rawValue: 25_000_000,
-						labelValue: null,
-						weight: 0.5
-					},
-					{
-						criterionId: 'c2',
-						name: 'Kualitas',
-						unit: 'poin',
-						type: 'benefit',
-						rawValue: 20,
-						labelValue: null,
-						weight: 0.5
-					}
-				],
 				results: [
-					{ id: 'a2', rank: 1, price: 25_000_000 },
-					{ id: 'a1', rank: 2, price: 20_000_000 }
+					{
+						id: 'a2',
+						rank: 1,
+						price: 25_000_000,
+						criteria: [
+							{
+								criterionId: 'c1',
+								name: 'Harga',
+								unit: 'Rp',
+								type: 'cost',
+								rawValue: 25_000_000,
+								labelValue: null,
+								weight: 0.5
+							},
+							{
+								criterionId: 'c2',
+								name: 'Kualitas',
+								unit: 'poin',
+								type: 'benefit',
+								rawValue: 20,
+								labelValue: null,
+								weight: 0.5
+							}
+						]
+					},
+					{ id: 'a1', rank: 2, price: 20_000_000, criteria: [{ criterionId: 'c1' }] }
 				]
 			}
 		});
