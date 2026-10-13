@@ -8,34 +8,49 @@ import { supabaseAdmin } from '$lib/server/supabase-admin.js';
 
 import type { RequestHandler } from './$types.js';
 
-const statusSchema = z.object({ id: z.uuid(), isActive: z.boolean() });
+const updateSchema = z
+	.object({
+		id: z.uuid(),
+		isActive: z.boolean().optional(),
+		role: z.enum(['admin']).optional()
+	})
+	.refine((data) => data.isActive !== undefined || data.role !== undefined, {
+		message: 'Data pembaruan tidak valid.'
+	});
 
 export const PATCH: RequestHandler = async ({ locals, params, request }) => {
-	const result = statusSchema.safeParse({
+	const result = updateSchema.safeParse({
 		id: params.id,
 		...(await request.json().catch(() => ({})))
 	});
 
-	if (!result.success) error(400, 'Data status tidak valid.');
+	if (!result.success) error(400, 'Data pembaruan tidak valid.');
 
-	const { user } = await locals.safeGetSession();
-	if (user?.id === result.data.id && !result.data.isActive) {
-		error(403, 'Akun yang sedang digunakan tidak dapat dinonaktifkan.');
+	if (result.data.role) {
+		await db
+			.update(profilesTable)
+			.set({ role: result.data.role })
+			.where(eq(profilesTable.id, result.data.id))
+			.catch(() => error(500, 'Gagal memperbarui role pengguna.'));
 	}
 
-	const { data, error: authError } = await supabaseAdmin.auth.admin
-		.updateUserById(result.data.id, {
-			ban_duration: result.data.isActive ? 'none' : '876000h'
-		})
-		.catch(() => error(500, 'Gagal mengubah status pengguna.'));
+	if (result.data.isActive !== undefined) {
+		const { user } = await locals.safeGetSession();
+		if (user?.id === result.data.id && !result.data.isActive) {
+			error(403, 'Akun yang sedang digunakan tidak dapat dinonaktifkan.');
+		}
 
-	if (authError?.code === 'user_not_found') error(404, 'Pengguna tidak ditemukan.');
-	if (authError) error(500, 'Gagal mengubah status pengguna.');
+		const { error: authError } = await supabaseAdmin.auth.admin
+			.updateUserById(result.data.id, {
+				ban_duration: result.data.isActive ? 'none' : '876000h'
+			})
+			.catch(() => error(500, 'Gagal mengubah status pengguna.'));
 
-	return json({
-		success: true,
-		isActive: !data.user.banned_until || Date.parse(data.user.banned_until) <= Date.now()
-	});
+		if (authError?.code === 'user_not_found') error(404, 'Pengguna tidak ditemukan.');
+		if (authError) error(500, 'Gagal mengubah status pengguna.');
+	}
+
+	return json({ success: true });
 };
 
 export const DELETE: RequestHandler = async ({ params }) => {
