@@ -4,18 +4,22 @@
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import RotateCcwIcon from '@lucide/svelte/icons/rotate-ccw';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
+	import UserStarIcon from '@lucide/svelte/icons/user-star';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 
 	import ConfirmDeleteDialog from '$lib/components/confirm-delete-dialog.svelte';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+	import { Spinner } from '$lib/components/ui/spinner/index.js';
 
 	import type { UserRow } from './types.js';
 
 	let { user, onEdit }: { user: UserRow; onEdit: (user: UserRow) => void } = $props();
 	let pending = $state(false);
 	let deleteDialogOpen = $state(false);
+	let promoteDialogOpen = $state(false);
 
 	async function updateStatus() {
 		pending = true;
@@ -34,6 +38,29 @@
 			await invalidateAll();
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : 'Gagal mengubah status pengguna.');
+		} finally {
+			pending = false;
+		}
+	}
+
+	async function promoteToAdmin() {
+		pending = true;
+
+		try {
+			const response = await fetch(`/admin/users/${user.id}`, {
+				method: 'PATCH',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ role: 'admin' })
+			});
+			const body = (await response.json().catch(() => ({}))) as { message?: string };
+
+			if (!response.ok) throw new Error(body.message ?? 'Gagal menjadikan pengguna admin.');
+
+			toast.success('Pengguna berhasil dijadikan admin.');
+			promoteDialogOpen = false;
+			await invalidateAll();
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : 'Gagal menjadikan pengguna admin.');
 		} finally {
 			pending = false;
 		}
@@ -81,6 +108,13 @@
 					Edit
 				</DropdownMenu.Item>
 				<DropdownMenu.Item
+					disabled={pending || user.role === 'admin'}
+					onclick={() => (promoteDialogOpen = true)}
+				>
+					<UserStarIcon />
+					{user.role === 'admin' ? 'Sudah admin' : 'Jadikan admin'}
+				</DropdownMenu.Item>
+				<DropdownMenu.Item
 					variant={user.isActive ? 'destructive' : 'default'}
 					disabled={pending || (user.isCurrentUser && user.isActive)}
 					onclick={updateStatus}
@@ -106,6 +140,29 @@
 		</DropdownMenu.Content>
 	</DropdownMenu.Root>
 </div>
+
+<AlertDialog.Root bind:open={promoteDialogOpen}>
+	<AlertDialog.Content>
+		<AlertDialog.Header>
+			<AlertDialog.Title>Jadikan Admin?</AlertDialog.Title>
+			<AlertDialog.Description>
+				Apakah Anda yakin ingin menjadikan &quot;{user.name}&quot; sebagai admin? Pengguna akan
+				memperoleh akses penuh ke seluruh pengelolaan sistem.
+			</AlertDialog.Description>
+		</AlertDialog.Header>
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel disabled={pending}>Batal</AlertDialog.Cancel>
+			<Button disabled={pending} onclick={promoteToAdmin}>
+				{#if pending}
+					<Spinner data-icon="inline-start" />
+					Memproses...
+				{:else}
+					Jadikan Admin
+				{/if}
+			</Button>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>
 
 <ConfirmDeleteDialog
 	bind:open={deleteDialogOpen}
