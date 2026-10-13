@@ -1,44 +1,25 @@
 <script lang="ts">
-	import {
-		ArrowLeft,
-		ArrowRight,
-		Calculator,
-		CircleAlert,
-		Motorbike,
-		RotateCcw,
-		SlidersHorizontal,
-		Trophy
-	} from '@lucide/svelte';
+	import { Motorbike, SlidersHorizontal, Trophy } from '@lucide/svelte';
 	import { type FormResult, superForm } from 'sveltekit-superforms';
 	import { zod4Client } from 'sveltekit-superforms/adapters';
 
-	import yamahaLogo from '$lib/assets/favicon1.png';
-	import * as Accordion from '$lib/components/ui/accordion/index.js';
-	import * as Alert from '$lib/components/ui/alert/index.js';
+	import {
+		CalculateCandidatesStep,
+		CalculateNeedsStep,
+		CalculateResultsStep,
+		type CalculationData
+	} from '$lib/components/sales/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import * as Card from '$lib/components/ui/card/index.js';
-	import * as Empty from '$lib/components/ui/empty/index.js';
-	import * as Field from '$lib/components/ui/field/index.js';
-	import * as Form from '$lib/components/ui/form/index.js';
-	import * as Item from '$lib/components/ui/item/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
-	import { Separator } from '$lib/components/ui/separator/index.js';
-	import { Slider } from '$lib/components/ui/slider/index.js';
-	import { Spinner } from '$lib/components/ui/spinner/index.js';
 	import * as Stepper from '$lib/components/ui/stepper/index.js';
 	import { salesCalculationSchema } from '$lib/validations/sales-calculation.schema.js';
 
 	import type { ActionData, PageProps } from './$types.js';
 
-	type Calculation = NonNullable<NonNullable<ActionData>['calculation']>;
-	type WinnerCriterion = Calculation['results'][number]['criteria'][number];
-
 	let { data }: PageProps = $props();
 	let step = $state(1);
 	let reviewedFilterKey = $state<string | null>(null);
 	let calculatedFilterKey = $state<string | null>(null);
-	let calculation = $state.raw<Calculation | null>(null);
+	let calculation = $state.raw<CalculationData | null>(null);
 	let calculationIssues = $state.raw<string[]>([]);
 
 	const initialForm = () => data.form;
@@ -69,21 +50,6 @@
 	});
 	const { form: formData, enhance, submitting } = form;
 
-	const currencyFormatter = new Intl.NumberFormat('id-ID', {
-		style: 'currency',
-		currency: 'IDR',
-		maximumFractionDigits: 0
-	});
-	const scoreFormatter = new Intl.NumberFormat('id-ID', {
-		minimumFractionDigits: 6,
-		maximumFractionDigits: 6
-	});
-	const valueFormatter = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 });
-	const percentFormatter = new Intl.NumberFormat('id-ID', {
-		style: 'percent',
-		maximumFractionDigits: 2
-	});
-
 	let catalogPriceRange = $derived(data.priceRange ?? [0, 0]);
 	let categoryOptions = $derived([
 		{ value: 'all', label: 'Semua kategori' },
@@ -107,12 +73,6 @@
 		filteredAlternatives.some((alternative) => !alternative.isComplete)
 	);
 	let rankedAlternatives = $derived(calculation?.results ?? []);
-	let winner = $derived(rankedAlternatives[0]);
-	let runnerUp = $derived(rankedAlternatives[1]);
-	let winnerCriteria = $derived(rankedAlternatives[0]?.criteria ?? []);
-	let scoreGap = $derived(
-		winner && runnerUp ? winner.optimizationScore - runnerUp.optimizationScore : null
-	);
 	let canAccessCandidates = $derived(reviewedFilterKey === filterKey);
 	let canAccessResults = $derived(
 		calculatedFilterKey === filterKey && rankedAlternatives.length >= 2
@@ -136,18 +96,6 @@
 
 		reviewedFilterKey = filterKey;
 		step = 2;
-	}
-
-	function formatCurrency(value: number): string {
-		return currencyFormatter.format(value);
-	}
-
-	function formatCriterionValue(criterion: WinnerCriterion): string {
-		if (criterion.labelValue) return criterion.labelValue;
-		if (criterion.unit === 'Rp') return formatCurrency(criterion.rawValue);
-
-		const value = valueFormatter.format(criterion.rawValue);
-		return criterion.unit ? `${value} ${criterion.unit}` : value;
 	}
 </script>
 
@@ -222,479 +170,35 @@
 
 		<div class="mt-8">
 			{#if step === 1}
-				<Card.Root class="mx-auto w-full max-w-3xl">
-					<Card.Header>
-						<Card.Title>Kebutuhan pelanggan</Card.Title>
-						<Card.Description>
-							Tentukan kategori motor dan batas anggaran yang sedang dipertimbangkan.
-						</Card.Description>
-					</Card.Header>
-
-					<Card.Content>
-						{#if data.issues.length}
-							<Alert.Root variant="destructive" class="mb-6">
-								<CircleAlert />
-								<Alert.Title>Data belum siap digunakan</Alert.Title>
-								<Alert.Description>
-									<ul class="list-inside list-disc">
-										{#each data.issues as issue (issue)}
-											<li>{issue}</li>
-										{/each}
-									</ul>
-								</Alert.Description>
-							</Alert.Root>
-						{/if}
-
-						<Field.Group>
-							<Form.Field {form} name="category">
-								{#snippet children({ errors })}
-									<Field.Field data-invalid={errors.length > 0}>
-										<Form.Control>
-											{#snippet children({ props })}
-												<Field.Label for={props.id}>Kategori motor</Field.Label>
-												<Select.Root
-													type="single"
-													bind:value={$formData.category}
-													onValueChange={invalidateResult}
-												>
-													<Select.Trigger
-														id={props.id}
-														aria-invalid={errors.length > 0}
-														class="w-full"
-													>
-														{selectedCategoryLabel}
-													</Select.Trigger>
-													<Select.Content>
-														<Select.Group>
-															<Select.Label>Kategori</Select.Label>
-															{#each categoryOptions as option (option.value)}
-																<Select.Item value={option.value} label={option.label}>
-																	{option.label}
-																</Select.Item>
-															{/each}
-														</Select.Group>
-													</Select.Content>
-												</Select.Root>
-											{/snippet}
-										</Form.Control>
-										<Field.Description>
-											Pilih semua kategori jika pelanggan belum menentukan jenis motor.
-										</Field.Description>
-										<Form.FieldErrors />
-									</Field.Field>
-								{/snippet}
-							</Form.Field>
-
-							{#if data.priceRange}
-								<Field.Separator />
-
-								<Form.Field {form} name="priceRange">
-									{#snippet children({ errors })}
-										<Field.Field data-invalid={errors.length > 0}>
-											<div class="flex flex-wrap items-start justify-between gap-3">
-												<Field.Content>
-													<Field.Label id="budget-label">Anggaran pelanggan</Field.Label>
-													<Field.Description>
-														Geser kedua titik untuk menentukan harga minimum dan maksimum.
-													</Field.Description>
-												</Field.Content>
-												<Badge variant={filteredAlternatives.length >= 2 ? 'success' : 'warning'}>
-													{filteredAlternatives.length} motor sesuai
-												</Badge>
-											</div>
-
-											<div class="grid grid-cols-2 gap-4 rounded-xl bg-muted/50 p-4">
-												<div class="flex min-w-0 flex-col gap-1">
-													<span class="text-xs text-muted-foreground">Minimum</span>
-													<span
-														class="truncate font-mono text-base font-semibold tabular-nums sm:text-lg"
-													>
-														{formatCurrency($formData.priceRange[0])}
-													</span>
-												</div>
-												<div class="flex min-w-0 flex-col gap-1 text-right">
-													<span class="text-xs text-muted-foreground">Maksimum</span>
-													<span
-														class="truncate font-mono text-base font-semibold tabular-nums sm:text-lg"
-													>
-														{formatCurrency($formData.priceRange[1])}
-													</span>
-												</div>
-											</div>
-
-											<Form.Control>
-												{#snippet children({ props })}
-													<Slider
-														{...props}
-														type="multiple"
-														bind:value={$formData.priceRange}
-														onValueChange={invalidateResult}
-														min={catalogPriceRange[0]}
-														max={catalogPriceRange[1]}
-														step={100_000}
-														aria-labelledby="budget-label"
-														aria-invalid={errors.length > 0}
-														class="my-2"
-													/>
-												{/snippet}
-											</Form.Control>
-											<Form.FieldErrors />
-
-											<div class="flex justify-between gap-4 text-xs text-muted-foreground">
-												<span>{formatCurrency(catalogPriceRange[0])}</span>
-												<span>{formatCurrency(catalogPriceRange[1])}</span>
-											</div>
-										</Field.Field>
-									{/snippet}
-								</Form.Field>
-							{/if}
-						</Field.Group>
-					</Card.Content>
-
-					<Card.Footer class="flex-col-reverse gap-2 border-t sm:flex-row sm:justify-between">
-						<Button type="button" variant="ghost" class="w-full sm:w-auto" onclick={resetFilters}>
-							<RotateCcw data-icon="inline-start" />
-							Reset rentang
-						</Button>
-						<Button
-							type="button"
-							class="w-full sm:w-auto"
-							disabled={!data.priceRange || data.issues.length > 0}
-							onclick={showCandidates}
-						>
-							Tampilkan {filteredAlternatives.length} kandidat
-							<ArrowRight data-icon="inline-end" />
-						</Button>
-					</Card.Footer>
-				</Card.Root>
+				<CalculateNeedsStep
+					{form}
+					{formData}
+					catalogPriceRange={data.priceRange}
+					{categoryOptions}
+					{selectedCategoryLabel}
+					filteredAlternativesCount={filteredAlternatives.length}
+					issues={data.issues}
+					onResetFilters={resetFilters}
+					onShowCandidates={showCandidates}
+					onInvalidateResult={invalidateResult}
+				/>
 			{:else if step === 2}
-				<section class="flex flex-col gap-6" aria-labelledby="candidate-title">
-					<header class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-						<div class="flex flex-col gap-1">
-							<h2 id="candidate-title" class="font-display text-2xl font-semibold tracking-tight">
-								{filteredAlternatives.length} motor ditemukan
-							</h2>
-							<p class="text-sm text-muted-foreground">
-								Seluruh motor berikut akan dibandingkan menggunakan bobot yang sama.
-							</p>
-						</div>
-						<div class="flex flex-wrap gap-2">
-							<Badge variant="secondary">{selectedCategoryLabel}</Badge>
-							<Badge variant="outline">
-								{formatCurrency($formData.priceRange[0])}–{formatCurrency($formData.priceRange[1])}
-							</Badge>
-						</div>
-					</header>
-
-					{#if calculationIssues.length}
-						<Alert.Root variant="destructive">
-							<CircleAlert />
-							<Alert.Title>Perhitungan belum dapat dijalankan</Alert.Title>
-							<Alert.Description>
-								<ul class="list-inside list-disc">
-									{#each calculationIssues as issue (issue)}
-										<li>{issue}</li>
-									{/each}
-								</ul>
-							</Alert.Description>
-						</Alert.Root>
-					{/if}
-
-					{#if filteredAlternatives.length === 0}
-						<Empty.Root class="min-h-80 border border-dashed">
-							<Empty.Header>
-								<Empty.Media variant="icon"><Motorbike /></Empty.Media>
-								<Empty.Title>Tidak ada motor yang sesuai</Empty.Title>
-								<Empty.Description>
-									Perluas rentang harga atau pilih kategori lain untuk menemukan kandidat.
-								</Empty.Description>
-							</Empty.Header>
-						</Empty.Root>
-					{:else}
-						{#if filteredAlternatives.length === 1}
-							<Alert.Root>
-								<CircleAlert />
-								<Alert.Title>Butuh satu pembanding lagi</Alert.Title>
-								<Alert.Description>
-									Perhitungan MOORA memerlukan minimal dua motor. Perluas filter sebelum
-									melanjutkan.
-								</Alert.Description>
-							</Alert.Root>
-						{/if}
-						{#if hasIncompleteCandidates}
-							<Alert.Root variant="destructive">
-								<CircleAlert />
-								<Alert.Title>Data kandidat belum lengkap</Alert.Title>
-								<Alert.Description>
-									Minta admin melengkapi seluruh nilai kriteria sebelum menjalankan perhitungan.
-								</Alert.Description>
-							</Alert.Root>
-						{/if}
-
-						<Item.Group class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-							{#each filteredAlternatives as alternative (alternative.id)}
-								<Item.Root variant="outline" role="listitem" class="overflow-hidden p-0">
-									<Item.Header class="aspect-4/3 bg-muted/40 p-5">
-										<img
-											src={alternative.imageUrl ?? yamahaLogo}
-											alt={`Yamaha ${alternative.name}`}
-											class="h-full w-full object-contain"
-										/>
-									</Item.Header>
-									<Item.Content class="basis-full gap-3 px-4 pb-4">
-										<div class="flex items-start justify-between gap-3">
-											<div class="flex min-w-0 flex-col gap-1">
-												<Item.Description>{alternative.code}</Item.Description>
-												<Item.Title class="line-clamp-2 text-base">
-													{alternative.name}
-												</Item.Title>
-											</div>
-											<Badge variant="secondary">{alternative.category}</Badge>
-										</div>
-										<p class="font-mono text-lg font-semibold tabular-nums">
-											{formatCurrency(alternative.price)}
-										</p>
-									</Item.Content>
-								</Item.Root>
-							{/each}
-						</Item.Group>
-					{/if}
-
-					<div class="flex flex-col-reverse gap-2 border-t pt-5 sm:flex-row sm:justify-between">
-						<Stepper.Previous>
-							{#snippet child({ props })}
-								<Button {...props} type="button" class="w-full sm:w-auto">
-									<ArrowLeft data-icon="inline-start" />
-									Kembali ke kebutuhan
-								</Button>
-							{/snippet}
-						</Stepper.Previous>
-						<form method="POST" action="?/calculate" use:enhance class="w-full sm:w-auto">
-							<Button
-								type="submit"
-								class="w-full sm:w-auto"
-								disabled={filteredAlternatives.length < 2 || hasIncompleteCandidates || $submitting}
-							>
-								{#if $submitting}
-									<Spinner data-icon="inline-start" />
-									Menghitung...
-								{:else}
-									<Calculator data-icon="inline-start" />
-									Hitung {filteredAlternatives.length} motor
-								{/if}
-							</Button>
-						</form>
-					</div>
-				</section>
-			{:else if step === 3 && winner}
-				<section class="flex flex-col gap-6" aria-labelledby="result-title">
-					<header class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-						<div class="flex flex-col gap-1">
-							<h2 id="result-title" class="font-display text-2xl font-semibold tracking-tight">
-								Hasil rekomendasi
-							</h2>
-							<p class="text-sm text-muted-foreground">
-								Peringkat berlaku untuk {rankedAlternatives.length} kandidat pada filter ini.
-							</p>
-						</div>
-						<div class="flex flex-wrap gap-2">
-							<Badge variant="secondary">{selectedCategoryLabel}</Badge>
-							<Badge variant="outline">
-								{formatCurrency($formData.priceRange[0])}–{formatCurrency($formData.priceRange[1])}
-							</Badge>
-						</div>
-					</header>
-
-					<Card.Root class="relative isolate min-h-96">
-						<span
-							aria-hidden="true"
-							class="pointer-events-none absolute -top-6 left-4 text-[8rem] leading-none font-black tracking-tighter text-primary/10 sm:text-[11rem]"
-						>
-							01
-						</span>
-						<Card.Header class="relative">
-							<Card.Action><Badge variant="success">Rekomendasi utama</Badge></Card.Action>
-							<Card.Title class="max-w-xl text-2xl sm:text-3xl">{winner.name}</Card.Title>
-							<Card.Description>
-								{winner.code} · {winner.category} · {formatCurrency(winner.price)}
-							</Card.Description>
-						</Card.Header>
-						<Card.Content class="relative grid flex-1 items-center gap-8 lg:grid-cols-2">
-							<div class="flex flex-col gap-5">
-								<div>
-									<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-										Skor optimasi
-									</p>
-									<p class="mt-1 font-mono text-4xl font-semibold tracking-tight tabular-nums">
-										{scoreFormatter.format(winner.optimizationScore)}
-									</p>
-								</div>
-								<dl class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-									<div class="col-span-2 rounded-lg bg-muted/50 p-3 sm:col-span-1">
-										<dt class="text-xs text-muted-foreground">Peringkat</dt>
-										<dd class="mt-1 font-mono font-semibold tabular-nums">
-											#{winner.rank} dari {rankedAlternatives.length}
-										</dd>
-									</div>
-									<div class="rounded-lg bg-muted/50 p-3">
-										<dt class="text-xs text-muted-foreground">Benefit</dt>
-										<dd class="mt-1 font-mono font-semibold tabular-nums">
-											{scoreFormatter.format(winner.totalBenefit)}
-										</dd>
-									</div>
-									<div class="rounded-lg bg-muted/50 p-3">
-										<dt class="text-xs text-muted-foreground">Cost</dt>
-										<dd class="mt-1 font-mono font-semibold tabular-nums">
-											{scoreFormatter.format(winner.totalCost)}
-										</dd>
-									</div>
-								</dl>
-								<p class="max-w-md leading-6 text-muted-foreground">
-									Skor optimasi diperoleh dari total benefit dikurangi total cost pada seluruh
-									kriteria aktif.
-								</p>
-								{#if runnerUp && scoreGap !== null}
-									<Item.Root variant="outline">
-										<Item.Content>
-											<Item.Description
-												>Pembanding terdekat · peringkat #{runnerUp.rank}</Item.Description
-											>
-											<Item.Title>{runnerUp.name}</Item.Title>
-										</Item.Content>
-										<Item.Actions class="ms-auto flex-col items-end">
-											<span class="font-mono text-sm font-semibold tabular-nums">
-												{scoreFormatter.format(runnerUp.optimizationScore)}
-											</span>
-											<span class="text-xs text-muted-foreground">
-												Selisih {scoreFormatter.format(scoreGap)}
-											</span>
-										</Item.Actions>
-									</Item.Root>
-								{/if}
-							</div>
-							<div class="aspect-4/3 rounded-xl bg-muted/40 p-6 sm:p-8">
-								<img
-									src={winner.imageUrl ?? yamahaLogo}
-									alt={`Yamaha ${winner.name}`}
-									class="h-full w-full object-contain"
-								/>
-							</div>
-						</Card.Content>
-						{#if winnerCriteria.length}
-							<Card.Footer class="relative flex-col items-stretch gap-4 border-t">
-								<div class="flex flex-col gap-1">
-									<h3 class="font-display text-lg font-semibold">Dasar penilaian</h3>
-									<p class="text-sm text-muted-foreground">
-										Nilai motor pada setiap kriteria beserta jenis dan bobotnya.
-									</p>
-								</div>
-								<dl class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-									{#each winnerCriteria as criterion (criterion.criterionId)}
-										<div class="flex min-w-0 flex-col gap-2 rounded-lg border p-4">
-											<dt class="text-sm text-muted-foreground">{criterion.name}</dt>
-											<dd class="flex flex-1 flex-col gap-2">
-												<span class="font-medium wrap-break-word">
-													{formatCriterionValue(criterion)}
-												</span>
-												<span
-													class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
-												>
-													<Badge variant={criterion.type === 'benefit' ? 'success' : 'destructive'}>
-														{criterion.type === 'benefit' ? 'Benefit' : 'Cost'}
-													</Badge>
-													Bobot {percentFormatter.format(criterion.weight)}
-												</span>
-											</dd>
-										</div>
-									{/each}
-								</dl>
-							</Card.Footer>
-						{/if}
-					</Card.Root>
-
-					<Card.Root>
-						<Card.Header>
-							<Card.Title>Peringkat kandidat</Card.Title>
-							<Card.Description>
-								Diurutkan dari skor optimasi tertinggi ke terendah.
-							</Card.Description>
-						</Card.Header>
-						<Card.Content>
-							<Accordion.Root type="multiple">
-								{#each rankedAlternatives as alternative (alternative.id)}
-									<Accordion.Item value={alternative.id}>
-										<Accordion.Trigger class="items-center gap-3 hover:no-underline">
-											<span class="size-10 shrink-0 overflow-hidden rounded-sm">
-												<img
-													src={alternative.imageUrl ?? yamahaLogo}
-													alt=""
-													class="size-full object-cover"
-												/>
-											</span>
-											<span class="flex min-w-0 flex-1 flex-col gap-0.5 text-left">
-												<span class="truncate font-medium">{alternative.name}</span>
-												<span class="truncate text-xs font-normal text-muted-foreground">
-													{alternative.category} · {formatCurrency(alternative.price)}
-												</span>
-											</span>
-											<span class="flex shrink-0 flex-col items-end gap-1 pe-1">
-												<Badge variant={alternative.rank === 1 ? 'default' : 'outline'}>
-													#{alternative.rank}
-												</Badge>
-												<span
-													class="font-mono text-xs font-normal text-muted-foreground tabular-nums"
-												>
-													{scoreFormatter.format(alternative.optimizationScore)}
-												</span>
-											</span>
-										</Accordion.Trigger>
-										<Accordion.Content>
-											{#if alternative.criteria.length}
-												<dl class="grid gap-2 sm:grid-cols-2">
-													{#each alternative.criteria as criterion (criterion.criterionId)}
-														<div class="flex min-w-0 flex-col gap-1 rounded-md border px-3 py-2">
-															<dt class="text-xs text-muted-foreground">{criterion.name}</dt>
-															<dd class="flex flex-wrap items-center gap-2 text-sm">
-																<span class="font-medium wrap-break-word">
-																	{formatCriterionValue(criterion)}
-																</span>
-																<Badge
-																	variant={criterion.type === 'benefit' ? 'success' : 'destructive'}
-																>
-																	{criterion.type === 'benefit' ? 'Benefit' : 'Cost'}
-																</Badge>
-																<span class="text-xs text-muted-foreground">
-																	Bobot {percentFormatter.format(criterion.weight)}
-																</span>
-															</dd>
-														</div>
-													{/each}
-												</dl>
-											{/if}
-										</Accordion.Content>
-									</Accordion.Item>
-								{/each}
-							</Accordion.Root>
-						</Card.Content>
-					</Card.Root>
-
-					<Separator />
-					<div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
-						<Button
-							type="button"
-							variant="outline"
-							class="w-full sm:w-auto"
-							onclick={() => (step = 1)}
-						>
-							<SlidersHorizontal data-icon="inline-start" />
-							Ubah kebutuhan
-						</Button>
-						<Button type="button" class="w-full sm:w-auto" onclick={() => (step = 2)}>
-							<Motorbike data-icon="inline-start" />
-							Lihat kandidat
-						</Button>
-					</div>
-				</section>
+				<CalculateCandidatesStep
+					{filteredAlternatives}
+					{selectedCategoryLabel}
+					priceRange={$formData.priceRange}
+					{calculationIssues}
+					{hasIncompleteCandidates}
+					submitting={$submitting}
+					{enhance}
+				/>
+			{:else if step === 3 && calculation}
+				<CalculateResultsStep
+					{calculation}
+					{selectedCategoryLabel}
+					priceRange={$formData.priceRange}
+					onNavigateStep={(targetStep) => (step = targetStep)}
+				/>
 			{/if}
 		</div>
 	</Stepper.Root>
